@@ -2,6 +2,22 @@ import Foundation
 import GRPCCore
 import GRPCNIOTransportHTTP2
 
+/// Thrown by the session watchdog when no message has been received from the
+/// mothership/Fleet for longer than the staleness window, forcing the session
+/// to tear down so the reconnect loop can run.
+struct SessionStalledError: Error {}
+
+/// Thread-safe timestamp of the last message received from the peer. Shared
+/// between the session's response loop (which touches it) and the watchdog
+/// (which reads it), so it can't live on the actor without forcing every touch
+/// through `await`.
+final class PongTracker: @unchecked Sendable {
+    private let lock = NSLock()
+    private var last = Date()
+    var value: Date { lock.withLock { last } }
+    func touch() { lock.withLock { last = Date() } }
+}
+
 public actor MothershipRegistrationClient {
     public let mothershipHost: String
     public let mothershipGRPCPort: Int
@@ -12,6 +28,7 @@ public actor MothershipRegistrationClient {
     public let requestDispatcher: any SessionRequestHandling
     private let logger: any ConduitLogger
     private var sessionTask: Task<Void, Never>?
+    private var heartbeatTask: Task<Void, Never>?
 
     public init(
         mothershipHost: String,
@@ -46,23 +63,74 @@ public actor MothershipRegistrationClient {
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
             }
         }
+        // Out-of-band liveness: a unary Heartbeat on its own short-lived
+        // connection, independent of the session stream. A large inbound push
+        // can saturate the session stream and stall the in-stream ping behind
+        // ≤100 MB index responses; this keeps Seer's `lastSeen` fresh regardless
+        // so the Totem isn't evicted mid-push.
+        heartbeatTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
+                guard !Task.isCancelled else { break }
+                await self?.sendUnaryHeartbeat()
+            }
+        }
     }
 
     public func stop() {
         sessionTask?.cancel()
         sessionTask = nil
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
+    }
+
+    // MARK: - Transport
+
+    /// Builds the HTTP/2 transport with keepalive enabled. NIO sends PING frames
+    /// after `time` of inactivity and tears the connection down if they aren't
+    /// answered within `timeout`, which fails the in-flight RPC so the reconnect
+    /// loop can run. PING frames are connection-level control frames, so they
+    /// keep flowing — and detect a dead peer — even while the session stream is
+    /// saturated by a large push. Without this, a silent drop / peer restart is
+    /// never observed and `runSession()` hangs forever.
+    private func makeTransport() throws -> HTTP2ClientTransport.Posix {
+        try .http2NIOPosix(
+            target: .ipv4(host: mothershipHost, port: mothershipGRPCPort),
+            transportSecurity: .plaintext,
+            config: .defaults { c in
+                c.connection.keepalive = .init(
+                    time: .seconds(15),
+                    timeout: .seconds(10),
+                    allowWithoutCalls: true
+                )
+            }
+        )
+    }
+
+    // MARK: - Out-of-band heartbeat
+
+    /// Sends a single unary Heartbeat on its own connection. Decoupled from the
+    /// session stream so it can never be queued behind large index responses.
+    private func sendUnaryHeartbeat() async {
+        do {
+            try await withGRPCClient(transport: makeTransport()) { [self] client in
+                let stub = Totem_V1_TotemRegistration.Client(wrapping: client)
+                var req = Totem_V1_HeartbeatRequest()
+                req.totemID = totemId.uuidString
+                var options = GRPCCore.CallOptions.defaults
+                options.timeout = .seconds(10)
+                _ = try await stub.heartbeat(req, options: options)
+            }
+        } catch {
+            logger.warning("MothershipRegistrationClient: out-of-band heartbeat failed — \(error)")
+        }
     }
 
     // MARK: - Availability (one-shot, own connection)
 
     public func sendAvailabilityUpdate(acceptingStorage: Bool) async {
         do {
-            try await withGRPCClient(
-                transport: .http2NIOPosix(
-                    target: .ipv4(host: mothershipHost, port: mothershipGRPCPort),
-                    transportSecurity: .plaintext
-                )
-            ) { client in
+            try await withGRPCClient(transport: makeTransport()) { client in
                 let stub = Totem_V1_TotemRegistration.Client(wrapping: client)
                 var req = Totem_V1_AvailabilityUpdateRequest()
                 req.totemID = self.totemId.uuidString
@@ -82,12 +150,7 @@ public actor MothershipRegistrationClient {
     /// them locally and sends responses back. Reconnects automatically on failure.
     private func runSession() async {
         do {
-            try await withGRPCClient(
-                transport: .http2NIOPosix(
-                    target: .ipv4(host: mothershipHost, port: mothershipGRPCPort),
-                    transportSecurity: .plaintext
-                )
-            ) { [self] client in
+            try await withGRPCClient(transport: makeTransport()) { [self] client in
                 let stub = Totem_V1_TotemRegistration.Client(wrapping: client)
 
                 // ── 1. Register (one attempt per fresh connection) ───────────
@@ -120,10 +183,25 @@ public actor MothershipRegistrationClient {
                 let myTotemId  = totemId
                 let dispatcher = requestDispatcher
 
-                var sessionOptions = GRPCCore.CallOptions.defaults
-                sessionOptions.maxRequestMessageBytes = 100 * 1024 * 1024
+                // Refreshed on every inbound message (a busy push is itself proof
+                // of life); read by the watchdog below.
+                let pongTracker = PongTracker()
 
-                try await stub.session(
+                let sessionOptions: GRPCCore.CallOptions = {
+                    var o = GRPCCore.CallOptions.defaults
+                    o.maxRequestMessageBytes = 100 * 1024 * 1024
+                    return o
+                }()
+
+                // Run the session under a watchdog. Keepalive (above) detects a
+                // dead connection; this catches the case where the connection is
+                // healthy but the session is application-wedged — if no message
+                // arrives for `stalenessSeconds`, tear it down so the outer loop
+                // reconnects. Kept < 60 s to stay inside Seer's active-node window.
+                let stalenessSeconds: TimeInterval = 45
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                  group.addTask { [self] in
+                    try await stub.session(
                     options: sessionOptions,
                     requestProducer: { [self] writer in
                         var ping = Totem_V1_TotemSessionMessage()
@@ -167,6 +245,8 @@ public actor MothershipRegistrationClient {
 
                         do {
                             for try await msg in streamingResponse.messages {
+                                // Any inbound message proves the peer is alive.
+                                pongTracker.touch()
                                 switch msg.payload {
                                 case .pong:
                                     logger.info("MothershipRegistrationClient: ← pong [\(msg.correlationID.prefix(8))]")
@@ -192,7 +272,31 @@ public actor MothershipRegistrationClient {
                         }
                         return ()
                     }
-                )
+                    )
+                  }
+
+                  // Watchdog: poll the tracker and throw to collapse the group
+                  // (cancelling the session task) when the peer goes silent.
+                  group.addTask { [self] in
+                      while !Task.isCancelled {
+                          do {
+                              try await Task.sleep(nanoseconds: 5_000_000_000)
+                          } catch {
+                              return  // cancelled — session ended normally
+                          }
+                          if Date().timeIntervalSince(pongTracker.value) > stalenessSeconds {
+                              logger.warning("MothershipRegistrationClient: no message from Seer in \(Int(stalenessSeconds))s — tearing down session to force reconnect")
+                              throw SessionStalledError()
+                          }
+                      }
+                  }
+
+                  // Whichever child finishes first (session ended, or watchdog
+                  // fired) tears down the other; a thrown error propagates out and
+                  // the outer loop reconnects after its 5 s backoff.
+                  _ = try await group.next()
+                  group.cancelAll()
+                }
             }
         } catch is CancellationError {
             // Normal shutdown — don't log.
