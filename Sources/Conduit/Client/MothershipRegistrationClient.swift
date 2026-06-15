@@ -90,29 +90,30 @@ public actor MothershipRegistrationClient {
             ) { [self] client in
                 let stub = Totem_V1_TotemRegistration.Client(wrapping: client)
 
-                // ── 1. Register — retry until accepted or cancelled ──────────
-                var registered = false
-                while !Task.isCancelled && !registered {
-                    do {
-                        var req = Totem_V1_RegisterRequest()
-                        req.totemID  = totemId.uuidString
-                        req.host     = totemHost
-                        req.grpcPort = Int32(totemGRPCPort)
-                        req.httpPort = Int32(totemHTTPPort)
-                        let resp = try await stub.register(req)
-                        if resp.accepted {
-                            logger.info("MothershipRegistrationClient: registered with mothership \(resp.mothershipID)")
-                            registered = true
-                        } else {
-                            logger.error("MothershipRegistrationClient: registration rejected (invalid totem ID?)")
-                            return
-                        }
-                    } catch {
-                        logger.warning("MothershipRegistrationClient: register failed — \(error), retrying in 5 s")
-                        try await Task.sleep(nanoseconds: 5_000_000_000)
-                    }
+                // ── 1. Register (one attempt per fresh connection) ───────────
+                // `waitForReady` lets this attempt ride out transient connection
+                // failures and register the moment the mothership/Fleet comes up
+                // (up to `timeout`), instead of aborting immediately. If it still
+                // fails, the error propagates out of `withGRPCClient`, tearing this
+                // connection down so the outer loop reconnects with a *fresh*
+                // client. Previously the register retry reused the same client, so a
+                // Totem started before its mothership never connected until restarted.
+                guard !Task.isCancelled else { return }
+                var registerOptions = GRPCCore.CallOptions.defaults
+                registerOptions.waitForReady = true
+                registerOptions.timeout = .seconds(60)
+
+                var req = Totem_V1_RegisterRequest()
+                req.totemID  = totemId.uuidString
+                req.host     = totemHost
+                req.grpcPort = Int32(totemGRPCPort)
+                req.httpPort = Int32(totemHTTPPort)
+                let resp = try await stub.register(req, options: registerOptions)
+                guard resp.accepted else {
+                    logger.error("MothershipRegistrationClient: registration rejected (invalid totem ID?)")
+                    return
                 }
-                guard registered else { return }
+                logger.info("MothershipRegistrationClient: registered with mothership \(resp.mothershipID)")
 
                 // ── 2. Bidirectional session stream ──────────────────────────
                 let (outgoing, continuation) = AsyncStream.makeStream(of: Totem_V1_TotemSessionMessage.self)
