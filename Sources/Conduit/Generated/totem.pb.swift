@@ -115,7 +115,8 @@ public nonisolated struct Totem_V1_TotemSearchRequest: Sendable {
 
   public var queryEmbedding: [Float] = []
 
-  public var queryTagEmbedding: [Float] = []
+  /// was query_tag_embedding (same wire format)
+  public var queryEntityEmbedding: [Float] = []
 
   public var ownerID: String = String()
 
@@ -130,6 +131,9 @@ public nonisolated struct Totem_V1_TotemSearchRequest: Sendable {
   /// raw query; Totem embeds if query_embedding is empty
   public var queryText: String = String()
 
+  /// query entity terms for graph matching
+  public var entities: [String] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -141,6 +145,36 @@ public nonisolated struct Totem_V1_TotemSearchResponse: Sendable {
   // methods supported on all messages.
 
   public var results: [Totem_V1_TotemPartitionResult] = []
+
+  /// how the knowledge graph shaped this search
+  public var trace: Totem_V1_TotemGraphTrace {
+    get {_trace ?? Totem_V1_TotemGraphTrace()}
+    set {_trace = newValue}
+  }
+  /// Returns true if `trace` has been explicitly set.
+  public var hasTrace: Bool {self._trace != nil}
+  /// Clears the value of `trace`. Subsequent reads from it will return its default value.
+  public mutating func clearTrace() {self._trace = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _trace: Totem_V1_TotemGraphTrace? = nil
+}
+
+/// Graph provenance for a hybrid search: which entities matched the query and
+/// which edges pulled in extra documents during one-hop expansion.
+public nonisolated struct Totem_V1_TotemGraphTrace: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var matchedEntityIds: [String] = []
+
+  public var expansionEdgeIds: [String] = []
+
+  public var expandedDocumentCount: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -164,6 +198,9 @@ public nonisolated struct Totem_V1_TotemPartitionResult: Sendable {
 
   public var score: Float = 0
 
+  /// always 0; shards retired with HNSW
+  ///
+  /// NOTE: This field was marked as deprecated in the .proto file.
   public var shardIndex: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -200,6 +237,7 @@ public nonisolated struct Totem_V1_TotemIndexItem: Sendable {
 
   public var texts: [String] = []
 
+  /// legacy: treated as concept entities when entities is empty
   public var tags: [String] = []
 
   public var name: String = String()
@@ -207,6 +245,43 @@ public nonisolated struct Totem_V1_TotemIndexItem: Sendable {
   public var metadata: Data = Data()
 
   public var mediaType: String = String()
+
+  /// caller-provided graph payload (optional;
+  public var entities: [Totem_V1_TotemGraphEntityIn] = []
+
+  /// Totem extracts when both are empty)
+  public var relationships: [Totem_V1_TotemGraphRelationIn] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Totem_V1_TotemGraphEntityIn: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String = String()
+
+  /// person|organization|place|event|work|concept|other; "" = concept
+  public var kind: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Totem_V1_TotemGraphRelationIn: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var subject: String = String()
+
+  public var predicate: String = String()
+
+  public var object: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -449,87 +524,48 @@ public nonisolated struct Totem_V1_TotemLibraryResponse: Sendable {
   public init() {}
 }
 
-/// owner_id + empty document_id → per-owner stats
-/// owner_id + non-empty document_id → per-document stats
-public nonisolated struct Totem_V1_TotemHNSWStatsRequest: Sendable {
+/// entity: exact/token entity name to match; query: free text (Totem embeds it)
+/// At least one of entity/query should be set. hops 0–3 (BFS depth from matches).
+public nonisolated struct Totem_V1_TotemGraphQueryRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var ownerID: String = String()
 
-  public var documentID: String = String()
+  public var entity: String = String()
+
+  public var query: String = String()
+
+  public var kinds: [String] = []
+
+  public var hops: Int32 = 0
+
+  /// 0 = default
+  public var limit: Int32 = 0
+
+  public var includeDocuments: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
 
-public nonisolated struct Totem_V1_TotemHNSWGraphStats: Sendable {
+public nonisolated struct Totem_V1_TotemGraphEntity: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var liveNodes: Int32 = 0
+  public var id: String = String()
 
-  public var maxLevel: Int32 = 0
+  public var name: String = String()
 
-  public var isTrained: Bool = false
+  public var kind: String = String()
 
-  public var shardCount: Int32 = 0
+  /// match score for seed entities; 0 for neighbors
+  public var score: Float = 0
 
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Totem_V1_TotemHNSWStatsResponse: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var personal: Totem_V1_TotemHNSWGraphStats {
-    get {_personal ?? Totem_V1_TotemHNSWGraphStats()}
-    set {_personal = newValue}
-  }
-  /// Returns true if `personal` has been explicitly set.
-  public var hasPersonal: Bool {self._personal != nil}
-  /// Clears the value of `personal`. Subsequent reads from it will return its default value.
-  public mutating func clearPersonal() {self._personal = nil}
-
-  public var global: Totem_V1_TotemHNSWGraphStats {
-    get {_global ?? Totem_V1_TotemHNSWGraphStats()}
-    set {_global = newValue}
-  }
-  /// Returns true if `global` has been explicitly set.
-  public var hasGlobal: Bool {self._global != nil}
-  /// Clears the value of `global`. Subsequent reads from it will return its default value.
-  public mutating func clearGlobal() {self._global = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _personal: Totem_V1_TotemHNSWGraphStats? = nil
-  fileprivate var _global: Totem_V1_TotemHNSWGraphStats? = nil
-}
-
-/// scope: "personal" | "global" | "documents"
-/// shard_index: -1 = all shards, ≥ 0 = specific shard
-public nonisolated struct Totem_V1_TotemHNSWGraphRequest: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var ownerID: String = String()
-
-  public var scope: String = String()
-
-  public var hubsOnly: Bool = false
-
-  public var shardIndex: Int32 = 0
-
-  public var documentID: String = String()
+  public var mentionCount: Int32 = 0
 
   public var documentIds: [String] = []
 
@@ -538,139 +574,83 @@ public nonisolated struct Totem_V1_TotemHNSWGraphRequest: Sendable {
   public init() {}
 }
 
-public nonisolated struct Totem_V1_TotemHNSWNode: Sendable {
+public nonisolated struct Totem_V1_TotemGraphRelationship: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var partitionID: String = String()
+  public var id: String = String()
 
-  public var documentID: String = String()
+  public var subjectID: String = String()
 
-  public var documentURL: String = String()
+  public var predicate: String = String()
 
-  public var documentOwnerID: String = String()
+  public var objectID: String = String()
 
-  public var text: String = String()
+  public var weight: Int32 = 0
 
-  public var level: Int32 = 0
-
-  public var neighborIds: [String] = []
-
-  public var isDeleted: Bool = false
-
-  public var metadata: Data = Data()
+  public var documentIds: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
 
-public nonisolated struct Totem_V1_TotemHNSWGraphResponse: Sendable {
+public nonisolated struct Totem_V1_TotemGraphDocument: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var nodes: [Totem_V1_TotemHNSWNode] = []
+  public var id: String = String()
 
-  public var totalNodes: Int32 = 0
-
-  public var liveNodes: Int32 = 0
-
-  public var maxLevel: Int32 = 0
-
-  public var shardIndex: Int32 = 0
-
-  public var shardCount: Int32 = 0
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Totem_V1_TotemHNSWNodeBatchRequest: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var partitionIds: [String] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Totem_V1_TotemHNSWNodeBatchResponse: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var nodes: [Totem_V1_TotemHNSWNode] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Totem_V1_TotemHNSWNodeRequest: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var partitionID: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Totem_V1_TotemHNSWNodeResponse: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var node: Totem_V1_TotemHNSWNode {
-    get {_node ?? Totem_V1_TotemHNSWNode()}
-    set {_node = newValue}
-  }
-  /// Returns true if `node` has been explicitly set.
-  public var hasNode: Bool {self._node != nil}
-  /// Clears the value of `node`. Subsequent reads from it will return its default value.
-  public mutating func clearNode() {self._node = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _node: Totem_V1_TotemHNSWNode? = nil
-}
-
-public nonisolated struct Totem_V1_TotemHNSWDeleteNodeRequest: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
+  public var name: String = String()
 
   public var ownerID: String = String()
 
-  public var partitionID: String = String()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Totem_V1_TotemGraphStats: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var entityCount: Int64 = 0
+
+  public var relationshipCount: Int64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
 
-public nonisolated struct Totem_V1_TotemHNSWDeleteNodeResponse: Sendable {
+public nonisolated struct Totem_V1_TotemGraphQueryResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var removed: Bool = false
+  public var entities: [Totem_V1_TotemGraphEntity] = []
 
-  public var documentID: String = String()
+  public var relationships: [Totem_V1_TotemGraphRelationship] = []
+
+  public var documents: [Totem_V1_TotemGraphDocument] = []
+
+  public var stats: Totem_V1_TotemGraphStats {
+    get {_stats ?? Totem_V1_TotemGraphStats()}
+    set {_stats = newValue}
+  }
+  /// Returns true if `stats` has been explicitly set.
+  public var hasStats: Bool {self._stats != nil}
+  /// Clears the value of `stats`. Subsequent reads from it will return its default value.
+  public mutating func clearStats() {self._stats = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _stats: Totem_V1_TotemGraphStats? = nil
 }
 
 /// ── Session envelope — used by the bidirectional Session RPC ─────────────────
@@ -768,86 +748,6 @@ public nonisolated struct Totem_V1_TotemSessionMessage: Sendable {
     set {payload = .libraryResponse(newValue)}
   }
 
-  public var hnswStatsRequest: Totem_V1_TotemHNSWStatsRequest {
-    get {
-      if case .hnswStatsRequest(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWStatsRequest()
-    }
-    set {payload = .hnswStatsRequest(newValue)}
-  }
-
-  public var hnswStatsResponse: Totem_V1_TotemHNSWStatsResponse {
-    get {
-      if case .hnswStatsResponse(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWStatsResponse()
-    }
-    set {payload = .hnswStatsResponse(newValue)}
-  }
-
-  public var hnswGraphRequest: Totem_V1_TotemHNSWGraphRequest {
-    get {
-      if case .hnswGraphRequest(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWGraphRequest()
-    }
-    set {payload = .hnswGraphRequest(newValue)}
-  }
-
-  public var hnswGraphResponse: Totem_V1_TotemHNSWGraphResponse {
-    get {
-      if case .hnswGraphResponse(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWGraphResponse()
-    }
-    set {payload = .hnswGraphResponse(newValue)}
-  }
-
-  public var hnswNodeBatchRequest: Totem_V1_TotemHNSWNodeBatchRequest {
-    get {
-      if case .hnswNodeBatchRequest(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWNodeBatchRequest()
-    }
-    set {payload = .hnswNodeBatchRequest(newValue)}
-  }
-
-  public var hnswNodeBatchResponse: Totem_V1_TotemHNSWNodeBatchResponse {
-    get {
-      if case .hnswNodeBatchResponse(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWNodeBatchResponse()
-    }
-    set {payload = .hnswNodeBatchResponse(newValue)}
-  }
-
-  public var hnswNodeRequest: Totem_V1_TotemHNSWNodeRequest {
-    get {
-      if case .hnswNodeRequest(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWNodeRequest()
-    }
-    set {payload = .hnswNodeRequest(newValue)}
-  }
-
-  public var hnswNodeResponse: Totem_V1_TotemHNSWNodeResponse {
-    get {
-      if case .hnswNodeResponse(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWNodeResponse()
-    }
-    set {payload = .hnswNodeResponse(newValue)}
-  }
-
-  public var hnswDeleteNodeRequest: Totem_V1_TotemHNSWDeleteNodeRequest {
-    get {
-      if case .hnswDeleteNodeRequest(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWDeleteNodeRequest()
-    }
-    set {payload = .hnswDeleteNodeRequest(newValue)}
-  }
-
-  public var hnswDeleteNodeResponse: Totem_V1_TotemHNSWDeleteNodeResponse {
-    get {
-      if case .hnswDeleteNodeResponse(let v)? = payload {return v}
-      return Totem_V1_TotemHNSWDeleteNodeResponse()
-    }
-    set {payload = .hnswDeleteNodeResponse(newValue)}
-  }
-
   public var updateGroupRequest: Totem_V1_TotemUpdateGroupRequest {
     get {
       if case .updateGroupRequest(let v)? = payload {return v}
@@ -896,6 +796,22 @@ public nonisolated struct Totem_V1_TotemSessionMessage: Sendable {
     set {payload = .statsResponse(newValue)}
   }
 
+  public var graphRequest: Totem_V1_TotemGraphQueryRequest {
+    get {
+      if case .graphRequest(let v)? = payload {return v}
+      return Totem_V1_TotemGraphQueryRequest()
+    }
+    set {payload = .graphRequest(newValue)}
+  }
+
+  public var graphResponse: Totem_V1_TotemGraphQueryResponse {
+    get {
+      if case .graphResponse(let v)? = payload {return v}
+      return Totem_V1_TotemGraphQueryResponse()
+    }
+    set {payload = .graphResponse(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Payload: Equatable, Sendable {
@@ -909,22 +825,14 @@ public nonisolated struct Totem_V1_TotemSessionMessage: Sendable {
     case removeResponse(Totem_V1_TotemRemoveResponse)
     case libraryRequest(Totem_V1_TotemLibraryRequest)
     case libraryResponse(Totem_V1_TotemLibraryResponse)
-    case hnswStatsRequest(Totem_V1_TotemHNSWStatsRequest)
-    case hnswStatsResponse(Totem_V1_TotemHNSWStatsResponse)
-    case hnswGraphRequest(Totem_V1_TotemHNSWGraphRequest)
-    case hnswGraphResponse(Totem_V1_TotemHNSWGraphResponse)
-    case hnswNodeBatchRequest(Totem_V1_TotemHNSWNodeBatchRequest)
-    case hnswNodeBatchResponse(Totem_V1_TotemHNSWNodeBatchResponse)
-    case hnswNodeRequest(Totem_V1_TotemHNSWNodeRequest)
-    case hnswNodeResponse(Totem_V1_TotemHNSWNodeResponse)
-    case hnswDeleteNodeRequest(Totem_V1_TotemHNSWDeleteNodeRequest)
-    case hnswDeleteNodeResponse(Totem_V1_TotemHNSWDeleteNodeResponse)
     case updateGroupRequest(Totem_V1_TotemUpdateGroupRequest)
     case updateGroupResponse(Totem_V1_TotemUpdateGroupResponse)
     case updateDocumentRequest(Totem_V1_TotemUpdateDocumentRequest)
     case updateDocumentResponse(Totem_V1_TotemUpdateDocumentResponse)
     case statsRequest(Totem_V1_TotemStatsRequest)
     case statsResponse(Totem_V1_TotemStatsResponse)
+    case graphRequest(Totem_V1_TotemGraphQueryRequest)
+    case graphResponse(Totem_V1_TotemGraphQueryResponse)
 
   }
 
@@ -1162,7 +1070,7 @@ nonisolated extension Totem_V1_AvailabilityUpdateResponse: SwiftProtobuf.Message
 
 nonisolated extension Totem_V1_TotemSearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TotemSearchRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}query_embedding\0\u{3}query_tag_embedding\0\u{3}owner_id\0\u{1}scope\0\u{3}top_k\0\u{3}group_ids\0\u{1}aggregate\0\u{3}query_text\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}query_embedding\0\u{3}query_entity_embedding\0\u{3}owner_id\0\u{1}scope\0\u{3}top_k\0\u{3}group_ids\0\u{1}aggregate\0\u{3}query_text\0\u{1}entities\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1171,13 +1079,14 @@ nonisolated extension Totem_V1_TotemSearchRequest: SwiftProtobuf.Message, SwiftP
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedFloatField(value: &self.queryEmbedding) }()
-      case 2: try { try decoder.decodeRepeatedFloatField(value: &self.queryTagEmbedding) }()
+      case 2: try { try decoder.decodeRepeatedFloatField(value: &self.queryEntityEmbedding) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.ownerID) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.scope) }()
       case 5: try { try decoder.decodeSingularInt32Field(value: &self.topK) }()
       case 6: try { try decoder.decodeRepeatedStringField(value: &self.groupIds) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.aggregate) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.queryText) }()
+      case 9: try { try decoder.decodeRepeatedStringField(value: &self.entities) }()
       default: break
       }
     }
@@ -1187,8 +1096,8 @@ nonisolated extension Totem_V1_TotemSearchRequest: SwiftProtobuf.Message, SwiftP
     if !self.queryEmbedding.isEmpty {
       try visitor.visitPackedFloatField(value: self.queryEmbedding, fieldNumber: 1)
     }
-    if !self.queryTagEmbedding.isEmpty {
-      try visitor.visitPackedFloatField(value: self.queryTagEmbedding, fieldNumber: 2)
+    if !self.queryEntityEmbedding.isEmpty {
+      try visitor.visitPackedFloatField(value: self.queryEntityEmbedding, fieldNumber: 2)
     }
     if !self.ownerID.isEmpty {
       try visitor.visitSingularStringField(value: self.ownerID, fieldNumber: 3)
@@ -1208,18 +1117,22 @@ nonisolated extension Totem_V1_TotemSearchRequest: SwiftProtobuf.Message, SwiftP
     if !self.queryText.isEmpty {
       try visitor.visitSingularStringField(value: self.queryText, fieldNumber: 8)
     }
+    if !self.entities.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.entities, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Totem_V1_TotemSearchRequest, rhs: Totem_V1_TotemSearchRequest) -> Bool {
     if lhs.queryEmbedding != rhs.queryEmbedding {return false}
-    if lhs.queryTagEmbedding != rhs.queryTagEmbedding {return false}
+    if lhs.queryEntityEmbedding != rhs.queryEntityEmbedding {return false}
     if lhs.ownerID != rhs.ownerID {return false}
     if lhs.scope != rhs.scope {return false}
     if lhs.topK != rhs.topK {return false}
     if lhs.groupIds != rhs.groupIds {return false}
     if lhs.aggregate != rhs.aggregate {return false}
     if lhs.queryText != rhs.queryText {return false}
+    if lhs.entities != rhs.entities {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1227,7 +1140,7 @@ nonisolated extension Totem_V1_TotemSearchRequest: SwiftProtobuf.Message, SwiftP
 
 nonisolated extension Totem_V1_TotemSearchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TotemSearchResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}results\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}results\0\u{1}trace\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1236,20 +1149,69 @@ nonisolated extension Totem_V1_TotemSearchResponse: SwiftProtobuf.Message, Swift
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.results) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._trace) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.results.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.results, fieldNumber: 1)
     }
+    try { if let v = self._trace {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Totem_V1_TotemSearchResponse, rhs: Totem_V1_TotemSearchResponse) -> Bool {
     if lhs.results != rhs.results {return false}
+    if lhs._trace != rhs._trace {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Totem_V1_TotemGraphTrace: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemGraphTrace"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}matched_entity_ids\0\u{3}expansion_edge_ids\0\u{3}expanded_document_count\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.matchedEntityIds) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.expansionEdgeIds) }()
+      case 3: try { try decoder.decodeSingularInt32Field(value: &self.expandedDocumentCount) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.matchedEntityIds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.matchedEntityIds, fieldNumber: 1)
+    }
+    if !self.expansionEdgeIds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.expansionEdgeIds, fieldNumber: 2)
+    }
+    if self.expandedDocumentCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.expandedDocumentCount, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Totem_V1_TotemGraphTrace, rhs: Totem_V1_TotemGraphTrace) -> Bool {
+    if lhs.matchedEntityIds != rhs.matchedEntityIds {return false}
+    if lhs.expansionEdgeIds != rhs.expansionEdgeIds {return false}
+    if lhs.expandedDocumentCount != rhs.expandedDocumentCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1367,7 +1329,7 @@ nonisolated extension Totem_V1_TotemIndexRequest: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Totem_V1_TotemIndexItem: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TotemIndexItem"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}document_id\0\u{1}texts\0\u{1}tags\0\u{1}name\0\u{1}metadata\0\u{3}media_type\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}document_id\0\u{1}texts\0\u{1}tags\0\u{1}name\0\u{1}metadata\0\u{3}media_type\0\u{1}entities\0\u{1}relationships\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1381,6 +1343,8 @@ nonisolated extension Totem_V1_TotemIndexItem: SwiftProtobuf.Message, SwiftProto
       case 4: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 5: try { try decoder.decodeSingularBytesField(value: &self.metadata) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.mediaType) }()
+      case 7: try { try decoder.decodeRepeatedMessageField(value: &self.entities) }()
+      case 8: try { try decoder.decodeRepeatedMessageField(value: &self.relationships) }()
       default: break
       }
     }
@@ -1405,6 +1369,12 @@ nonisolated extension Totem_V1_TotemIndexItem: SwiftProtobuf.Message, SwiftProto
     if !self.mediaType.isEmpty {
       try visitor.visitSingularStringField(value: self.mediaType, fieldNumber: 6)
     }
+    if !self.entities.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.entities, fieldNumber: 7)
+    }
+    if !self.relationships.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.relationships, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1415,6 +1385,83 @@ nonisolated extension Totem_V1_TotemIndexItem: SwiftProtobuf.Message, SwiftProto
     if lhs.name != rhs.name {return false}
     if lhs.metadata != rhs.metadata {return false}
     if lhs.mediaType != rhs.mediaType {return false}
+    if lhs.entities != rhs.entities {return false}
+    if lhs.relationships != rhs.relationships {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Totem_V1_TotemGraphEntityIn: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemGraphEntityIn"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}kind\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Totem_V1_TotemGraphEntityIn, rhs: Totem_V1_TotemGraphEntityIn) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Totem_V1_TotemGraphRelationIn: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemGraphRelationIn"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}subject\0\u{1}predicate\0\u{1}object\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.subject) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.predicate) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.object) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.subject.isEmpty {
+      try visitor.visitSingularStringField(value: self.subject, fieldNumber: 1)
+    }
+    if !self.predicate.isEmpty {
+      try visitor.visitSingularStringField(value: self.predicate, fieldNumber: 2)
+    }
+    if !self.object.isEmpty {
+      try visitor.visitSingularStringField(value: self.object, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Totem_V1_TotemGraphRelationIn, rhs: Totem_V1_TotemGraphRelationIn) -> Bool {
+    if lhs.subject != rhs.subject {return false}
+    if lhs.predicate != rhs.predicate {return false}
+    if lhs.object != rhs.object {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1974,9 +2021,9 @@ nonisolated extension Totem_V1_TotemLibraryResponse: SwiftProtobuf.Message, Swif
   }
 }
 
-nonisolated extension Totem_V1_TotemHNSWStatsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWStatsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{3}document_id\0")
+nonisolated extension Totem_V1_TotemGraphQueryRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemGraphQueryRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{1}entity\0\u{1}query\0\u{1}kinds\0\u{1}hops\0\u{1}limit\0\u{3}include_documents\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1985,7 +2032,12 @@ nonisolated extension Totem_V1_TotemHNSWStatsRequest: SwiftProtobuf.Message, Swi
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.ownerID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.documentID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.entity) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.query) }()
+      case 4: try { try decoder.decodeRepeatedStringField(value: &self.kinds) }()
+      case 5: try { try decoder.decodeSingularInt32Field(value: &self.hops) }()
+      case 6: try { try decoder.decodeSingularInt32Field(value: &self.limit) }()
+      case 7: try { try decoder.decodeSingularBoolField(value: &self.includeDocuments) }()
       default: break
       }
     }
@@ -1995,23 +2047,43 @@ nonisolated extension Totem_V1_TotemHNSWStatsRequest: SwiftProtobuf.Message, Swi
     if !self.ownerID.isEmpty {
       try visitor.visitSingularStringField(value: self.ownerID, fieldNumber: 1)
     }
-    if !self.documentID.isEmpty {
-      try visitor.visitSingularStringField(value: self.documentID, fieldNumber: 2)
+    if !self.entity.isEmpty {
+      try visitor.visitSingularStringField(value: self.entity, fieldNumber: 2)
+    }
+    if !self.query.isEmpty {
+      try visitor.visitSingularStringField(value: self.query, fieldNumber: 3)
+    }
+    if !self.kinds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.kinds, fieldNumber: 4)
+    }
+    if self.hops != 0 {
+      try visitor.visitSingularInt32Field(value: self.hops, fieldNumber: 5)
+    }
+    if self.limit != 0 {
+      try visitor.visitSingularInt32Field(value: self.limit, fieldNumber: 6)
+    }
+    if self.includeDocuments != false {
+      try visitor.visitSingularBoolField(value: self.includeDocuments, fieldNumber: 7)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Totem_V1_TotemHNSWStatsRequest, rhs: Totem_V1_TotemHNSWStatsRequest) -> Bool {
+  public static func ==(lhs: Totem_V1_TotemGraphQueryRequest, rhs: Totem_V1_TotemGraphQueryRequest) -> Bool {
     if lhs.ownerID != rhs.ownerID {return false}
-    if lhs.documentID != rhs.documentID {return false}
+    if lhs.entity != rhs.entity {return false}
+    if lhs.query != rhs.query {return false}
+    if lhs.kinds != rhs.kinds {return false}
+    if lhs.hops != rhs.hops {return false}
+    if lhs.limit != rhs.limit {return false}
+    if lhs.includeDocuments != rhs.includeDocuments {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Totem_V1_TotemHNSWGraphStats: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWGraphStats"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}live_nodes\0\u{3}max_level\0\u{3}is_trained\0\u{3}shard_count\0")
+nonisolated extension Totem_V1_TotemGraphEntity: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemGraphEntity"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{1}kind\0\u{1}score\0\u{3}mention_count\0\u{3}document_ids\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2019,95 +2091,11 @@ nonisolated extension Totem_V1_TotemHNSWGraphStats: SwiftProtobuf.Message, Swift
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularInt32Field(value: &self.liveNodes) }()
-      case 2: try { try decoder.decodeSingularInt32Field(value: &self.maxLevel) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.isTrained) }()
-      case 4: try { try decoder.decodeSingularInt32Field(value: &self.shardCount) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.liveNodes != 0 {
-      try visitor.visitSingularInt32Field(value: self.liveNodes, fieldNumber: 1)
-    }
-    if self.maxLevel != 0 {
-      try visitor.visitSingularInt32Field(value: self.maxLevel, fieldNumber: 2)
-    }
-    if self.isTrained != false {
-      try visitor.visitSingularBoolField(value: self.isTrained, fieldNumber: 3)
-    }
-    if self.shardCount != 0 {
-      try visitor.visitSingularInt32Field(value: self.shardCount, fieldNumber: 4)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Totem_V1_TotemHNSWGraphStats, rhs: Totem_V1_TotemHNSWGraphStats) -> Bool {
-    if lhs.liveNodes != rhs.liveNodes {return false}
-    if lhs.maxLevel != rhs.maxLevel {return false}
-    if lhs.isTrained != rhs.isTrained {return false}
-    if lhs.shardCount != rhs.shardCount {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Totem_V1_TotemHNSWStatsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWStatsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}personal\0\u{1}global\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._personal) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._global) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._personal {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    try { if let v = self._global {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Totem_V1_TotemHNSWStatsResponse, rhs: Totem_V1_TotemHNSWStatsResponse) -> Bool {
-    if lhs._personal != rhs._personal {return false}
-    if lhs._global != rhs._global {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Totem_V1_TotemHNSWGraphRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWGraphRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{1}scope\0\u{3}hubs_only\0\u{3}shard_index\0\u{3}document_id\0\u{3}document_ids\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.ownerID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.scope) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.hubsOnly) }()
-      case 4: try { try decoder.decodeSingularInt32Field(value: &self.shardIndex) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.documentID) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      case 4: try { try decoder.decodeSingularFloatField(value: &self.score) }()
+      case 5: try { try decoder.decodeSingularInt32Field(value: &self.mentionCount) }()
       case 6: try { try decoder.decodeRepeatedStringField(value: &self.documentIds) }()
       default: break
       }
@@ -2115,20 +2103,20 @@ nonisolated extension Totem_V1_TotemHNSWGraphRequest: SwiftProtobuf.Message, Swi
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.ownerID.isEmpty {
-      try visitor.visitSingularStringField(value: self.ownerID, fieldNumber: 1)
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
-    if !self.scope.isEmpty {
-      try visitor.visitSingularStringField(value: self.scope, fieldNumber: 2)
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
     }
-    if self.hubsOnly != false {
-      try visitor.visitSingularBoolField(value: self.hubsOnly, fieldNumber: 3)
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 3)
     }
-    if self.shardIndex != 0 {
-      try visitor.visitSingularInt32Field(value: self.shardIndex, fieldNumber: 4)
+    if self.score.bitPattern != 0 {
+      try visitor.visitSingularFloatField(value: self.score, fieldNumber: 4)
     }
-    if !self.documentID.isEmpty {
-      try visitor.visitSingularStringField(value: self.documentID, fieldNumber: 5)
+    if self.mentionCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.mentionCount, fieldNumber: 5)
     }
     if !self.documentIds.isEmpty {
       try visitor.visitRepeatedStringField(value: self.documentIds, fieldNumber: 6)
@@ -2136,21 +2124,21 @@ nonisolated extension Totem_V1_TotemHNSWGraphRequest: SwiftProtobuf.Message, Swi
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Totem_V1_TotemHNSWGraphRequest, rhs: Totem_V1_TotemHNSWGraphRequest) -> Bool {
-    if lhs.ownerID != rhs.ownerID {return false}
-    if lhs.scope != rhs.scope {return false}
-    if lhs.hubsOnly != rhs.hubsOnly {return false}
-    if lhs.shardIndex != rhs.shardIndex {return false}
-    if lhs.documentID != rhs.documentID {return false}
+  public static func ==(lhs: Totem_V1_TotemGraphEntity, rhs: Totem_V1_TotemGraphEntity) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.score != rhs.score {return false}
+    if lhs.mentionCount != rhs.mentionCount {return false}
     if lhs.documentIds != rhs.documentIds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Totem_V1_TotemHNSWNode: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWNode"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}partition_id\0\u{3}document_id\0\u{3}document_url\0\u{3}document_owner_id\0\u{1}text\0\u{1}level\0\u{3}neighbor_ids\0\u{3}is_deleted\0\u{1}metadata\0")
+nonisolated extension Totem_V1_TotemGraphRelationship: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemGraphRelationship"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}subject_id\0\u{1}predicate\0\u{3}object_id\0\u{1}weight\0\u{3}document_ids\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2158,69 +2146,54 @@ nonisolated extension Totem_V1_TotemHNSWNode: SwiftProtobuf.Message, SwiftProtob
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.partitionID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.documentID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.documentURL) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.documentOwnerID) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.text) }()
-      case 6: try { try decoder.decodeSingularInt32Field(value: &self.level) }()
-      case 7: try { try decoder.decodeRepeatedStringField(value: &self.neighborIds) }()
-      case 8: try { try decoder.decodeSingularBoolField(value: &self.isDeleted) }()
-      case 9: try { try decoder.decodeSingularBytesField(value: &self.metadata) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.predicate) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.objectID) }()
+      case 5: try { try decoder.decodeSingularInt32Field(value: &self.weight) }()
+      case 6: try { try decoder.decodeRepeatedStringField(value: &self.documentIds) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.partitionID.isEmpty {
-      try visitor.visitSingularStringField(value: self.partitionID, fieldNumber: 1)
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
-    if !self.documentID.isEmpty {
-      try visitor.visitSingularStringField(value: self.documentID, fieldNumber: 2)
+    if !self.subjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.subjectID, fieldNumber: 2)
     }
-    if !self.documentURL.isEmpty {
-      try visitor.visitSingularStringField(value: self.documentURL, fieldNumber: 3)
+    if !self.predicate.isEmpty {
+      try visitor.visitSingularStringField(value: self.predicate, fieldNumber: 3)
     }
-    if !self.documentOwnerID.isEmpty {
-      try visitor.visitSingularStringField(value: self.documentOwnerID, fieldNumber: 4)
+    if !self.objectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.objectID, fieldNumber: 4)
     }
-    if !self.text.isEmpty {
-      try visitor.visitSingularStringField(value: self.text, fieldNumber: 5)
+    if self.weight != 0 {
+      try visitor.visitSingularInt32Field(value: self.weight, fieldNumber: 5)
     }
-    if self.level != 0 {
-      try visitor.visitSingularInt32Field(value: self.level, fieldNumber: 6)
-    }
-    if !self.neighborIds.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.neighborIds, fieldNumber: 7)
-    }
-    if self.isDeleted != false {
-      try visitor.visitSingularBoolField(value: self.isDeleted, fieldNumber: 8)
-    }
-    if !self.metadata.isEmpty {
-      try visitor.visitSingularBytesField(value: self.metadata, fieldNumber: 9)
+    if !self.documentIds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.documentIds, fieldNumber: 6)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Totem_V1_TotemHNSWNode, rhs: Totem_V1_TotemHNSWNode) -> Bool {
-    if lhs.partitionID != rhs.partitionID {return false}
-    if lhs.documentID != rhs.documentID {return false}
-    if lhs.documentURL != rhs.documentURL {return false}
-    if lhs.documentOwnerID != rhs.documentOwnerID {return false}
-    if lhs.text != rhs.text {return false}
-    if lhs.level != rhs.level {return false}
-    if lhs.neighborIds != rhs.neighborIds {return false}
-    if lhs.isDeleted != rhs.isDeleted {return false}
-    if lhs.metadata != rhs.metadata {return false}
+  public static func ==(lhs: Totem_V1_TotemGraphRelationship, rhs: Totem_V1_TotemGraphRelationship) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.subjectID != rhs.subjectID {return false}
+    if lhs.predicate != rhs.predicate {return false}
+    if lhs.objectID != rhs.objectID {return false}
+    if lhs.weight != rhs.weight {return false}
+    if lhs.documentIds != rhs.documentIds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Totem_V1_TotemHNSWGraphResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWGraphResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}nodes\0\u{3}total_nodes\0\u{3}live_nodes\0\u{3}max_level\0\u{3}shard_index\0\u{3}shard_count\0")
+nonisolated extension Totem_V1_TotemGraphDocument: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemGraphDocument"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}owner_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2228,54 +2201,39 @@ nonisolated extension Totem_V1_TotemHNSWGraphResponse: SwiftProtobuf.Message, Sw
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.nodes) }()
-      case 2: try { try decoder.decodeSingularInt32Field(value: &self.totalNodes) }()
-      case 3: try { try decoder.decodeSingularInt32Field(value: &self.liveNodes) }()
-      case 4: try { try decoder.decodeSingularInt32Field(value: &self.maxLevel) }()
-      case 5: try { try decoder.decodeSingularInt32Field(value: &self.shardIndex) }()
-      case 6: try { try decoder.decodeSingularInt32Field(value: &self.shardCount) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.ownerID) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.nodes.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.nodes, fieldNumber: 1)
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
-    if self.totalNodes != 0 {
-      try visitor.visitSingularInt32Field(value: self.totalNodes, fieldNumber: 2)
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
     }
-    if self.liveNodes != 0 {
-      try visitor.visitSingularInt32Field(value: self.liveNodes, fieldNumber: 3)
-    }
-    if self.maxLevel != 0 {
-      try visitor.visitSingularInt32Field(value: self.maxLevel, fieldNumber: 4)
-    }
-    if self.shardIndex != 0 {
-      try visitor.visitSingularInt32Field(value: self.shardIndex, fieldNumber: 5)
-    }
-    if self.shardCount != 0 {
-      try visitor.visitSingularInt32Field(value: self.shardCount, fieldNumber: 6)
+    if !self.ownerID.isEmpty {
+      try visitor.visitSingularStringField(value: self.ownerID, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Totem_V1_TotemHNSWGraphResponse, rhs: Totem_V1_TotemHNSWGraphResponse) -> Bool {
-    if lhs.nodes != rhs.nodes {return false}
-    if lhs.totalNodes != rhs.totalNodes {return false}
-    if lhs.liveNodes != rhs.liveNodes {return false}
-    if lhs.maxLevel != rhs.maxLevel {return false}
-    if lhs.shardIndex != rhs.shardIndex {return false}
-    if lhs.shardCount != rhs.shardCount {return false}
+  public static func ==(lhs: Totem_V1_TotemGraphDocument, rhs: Totem_V1_TotemGraphDocument) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.ownerID != rhs.ownerID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Totem_V1_TotemHNSWNodeBatchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWNodeBatchRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}partition_ids\0")
+nonisolated extension Totem_V1_TotemGraphStats: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemGraphStats"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}entity_count\0\u{3}relationship_count\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2283,29 +2241,34 @@ nonisolated extension Totem_V1_TotemHNSWNodeBatchRequest: SwiftProtobuf.Message,
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedStringField(value: &self.partitionIds) }()
+      case 1: try { try decoder.decodeSingularInt64Field(value: &self.entityCount) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.relationshipCount) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.partitionIds.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.partitionIds, fieldNumber: 1)
+    if self.entityCount != 0 {
+      try visitor.visitSingularInt64Field(value: self.entityCount, fieldNumber: 1)
+    }
+    if self.relationshipCount != 0 {
+      try visitor.visitSingularInt64Field(value: self.relationshipCount, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Totem_V1_TotemHNSWNodeBatchRequest, rhs: Totem_V1_TotemHNSWNodeBatchRequest) -> Bool {
-    if lhs.partitionIds != rhs.partitionIds {return false}
+  public static func ==(lhs: Totem_V1_TotemGraphStats, rhs: Totem_V1_TotemGraphStats) -> Bool {
+    if lhs.entityCount != rhs.entityCount {return false}
+    if lhs.relationshipCount != rhs.relationshipCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Totem_V1_TotemHNSWNodeBatchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWNodeBatchResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}nodes\0")
+nonisolated extension Totem_V1_TotemGraphQueryResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemGraphQueryResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entities\0\u{1}relationships\0\u{1}documents\0\u{1}stats\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2313,67 +2276,10 @@ nonisolated extension Totem_V1_TotemHNSWNodeBatchResponse: SwiftProtobuf.Message
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.nodes) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.nodes.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.nodes, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Totem_V1_TotemHNSWNodeBatchResponse, rhs: Totem_V1_TotemHNSWNodeBatchResponse) -> Bool {
-    if lhs.nodes != rhs.nodes {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Totem_V1_TotemHNSWNodeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWNodeRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}partition_id\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.partitionID) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.partitionID.isEmpty {
-      try visitor.visitSingularStringField(value: self.partitionID, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Totem_V1_TotemHNSWNodeRequest, rhs: Totem_V1_TotemHNSWNodeRequest) -> Bool {
-    if lhs.partitionID != rhs.partitionID {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Totem_V1_TotemHNSWNodeResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWNodeResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}node\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._node) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.entities) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.relationships) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.documents) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._stats) }()
       default: break
       }
     }
@@ -2384,84 +2290,26 @@ nonisolated extension Totem_V1_TotemHNSWNodeResponse: SwiftProtobuf.Message, Swi
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._node {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    if !self.entities.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.entities, fieldNumber: 1)
+    }
+    if !self.relationships.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.relationships, fieldNumber: 2)
+    }
+    if !self.documents.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.documents, fieldNumber: 3)
+    }
+    try { if let v = self._stats {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Totem_V1_TotemHNSWNodeResponse, rhs: Totem_V1_TotemHNSWNodeResponse) -> Bool {
-    if lhs._node != rhs._node {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Totem_V1_TotemHNSWDeleteNodeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWDeleteNodeRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{3}partition_id\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.ownerID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.partitionID) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.ownerID.isEmpty {
-      try visitor.visitSingularStringField(value: self.ownerID, fieldNumber: 1)
-    }
-    if !self.partitionID.isEmpty {
-      try visitor.visitSingularStringField(value: self.partitionID, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Totem_V1_TotemHNSWDeleteNodeRequest, rhs: Totem_V1_TotemHNSWDeleteNodeRequest) -> Bool {
-    if lhs.ownerID != rhs.ownerID {return false}
-    if lhs.partitionID != rhs.partitionID {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Totem_V1_TotemHNSWDeleteNodeResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TotemHNSWDeleteNodeResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}removed\0\u{3}document_id\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBoolField(value: &self.removed) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.documentID) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.removed != false {
-      try visitor.visitSingularBoolField(value: self.removed, fieldNumber: 1)
-    }
-    if !self.documentID.isEmpty {
-      try visitor.visitSingularStringField(value: self.documentID, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Totem_V1_TotemHNSWDeleteNodeResponse, rhs: Totem_V1_TotemHNSWDeleteNodeResponse) -> Bool {
-    if lhs.removed != rhs.removed {return false}
-    if lhs.documentID != rhs.documentID {return false}
+  public static func ==(lhs: Totem_V1_TotemGraphQueryResponse, rhs: Totem_V1_TotemGraphQueryResponse) -> Bool {
+    if lhs.entities != rhs.entities {return false}
+    if lhs.relationships != rhs.relationships {return false}
+    if lhs.documents != rhs.documents {return false}
+    if lhs._stats != rhs._stats {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2469,7 +2317,7 @@ nonisolated extension Totem_V1_TotemHNSWDeleteNodeResponse: SwiftProtobuf.Messag
 
 nonisolated extension Totem_V1_TotemSessionMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TotemSessionMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}correlation_id\0\u{3}totem_id\0\u{1}ping\0\u{1}pong\0\u{3}search_request\0\u{3}search_response\0\u{3}index_request\0\u{3}index_response\0\u{3}remove_request\0\u{3}remove_response\0\u{3}library_request\0\u{3}library_response\0\u{3}hnsw_stats_request\0\u{3}hnsw_stats_response\0\u{3}hnsw_graph_request\0\u{3}hnsw_graph_response\0\u{3}hnsw_node_batch_request\0\u{3}hnsw_node_batch_response\0\u{3}hnsw_node_request\0\u{3}hnsw_node_response\0\u{3}hnsw_delete_node_request\0\u{3}hnsw_delete_node_response\0\u{3}update_group_request\0\u{3}update_group_response\0\u{3}update_document_request\0\u{3}update_document_response\0\u{3}stats_request\0\u{3}stats_response\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}correlation_id\0\u{3}totem_id\0\u{1}ping\0\u{1}pong\0\u{3}search_request\0\u{3}search_response\0\u{3}index_request\0\u{3}index_response\0\u{3}remove_request\0\u{3}remove_response\0\u{3}library_request\0\u{3}library_response\0\u{4}\u{b}update_group_request\0\u{3}update_group_response\0\u{3}update_document_request\0\u{3}update_document_response\0\u{3}stats_request\0\u{3}stats_response\0\u{3}graph_request\0\u{3}graph_response\0\u{b}hnsw_stats_request\0\u{b}hnsw_stats_response\0\u{b}hnsw_graph_request\0\u{b}hnsw_graph_response\0\u{b}hnsw_node_batch_request\0\u{b}hnsw_node_batch_response\0\u{b}hnsw_node_request\0\u{b}hnsw_node_response\0\u{b}hnsw_delete_node_request\0\u{b}hnsw_delete_node_response\0\u{c}\u{d}\u{a}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2609,136 +2457,6 @@ nonisolated extension Totem_V1_TotemSessionMessage: SwiftProtobuf.Message, Swift
           self.payload = .libraryResponse(v)
         }
       }()
-      case 13: try {
-        var v: Totem_V1_TotemHNSWStatsRequest?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswStatsRequest(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswStatsRequest(v)
-        }
-      }()
-      case 14: try {
-        var v: Totem_V1_TotemHNSWStatsResponse?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswStatsResponse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswStatsResponse(v)
-        }
-      }()
-      case 15: try {
-        var v: Totem_V1_TotemHNSWGraphRequest?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswGraphRequest(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswGraphRequest(v)
-        }
-      }()
-      case 16: try {
-        var v: Totem_V1_TotemHNSWGraphResponse?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswGraphResponse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswGraphResponse(v)
-        }
-      }()
-      case 17: try {
-        var v: Totem_V1_TotemHNSWNodeBatchRequest?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswNodeBatchRequest(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswNodeBatchRequest(v)
-        }
-      }()
-      case 18: try {
-        var v: Totem_V1_TotemHNSWNodeBatchResponse?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswNodeBatchResponse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswNodeBatchResponse(v)
-        }
-      }()
-      case 19: try {
-        var v: Totem_V1_TotemHNSWNodeRequest?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswNodeRequest(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswNodeRequest(v)
-        }
-      }()
-      case 20: try {
-        var v: Totem_V1_TotemHNSWNodeResponse?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswNodeResponse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswNodeResponse(v)
-        }
-      }()
-      case 21: try {
-        var v: Totem_V1_TotemHNSWDeleteNodeRequest?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswDeleteNodeRequest(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswDeleteNodeRequest(v)
-        }
-      }()
-      case 22: try {
-        var v: Totem_V1_TotemHNSWDeleteNodeResponse?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .hnswDeleteNodeResponse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .hnswDeleteNodeResponse(v)
-        }
-      }()
       case 23: try {
         var v: Totem_V1_TotemUpdateGroupRequest?
         var hadOneofValue = false
@@ -2817,6 +2535,32 @@ nonisolated extension Totem_V1_TotemSessionMessage: SwiftProtobuf.Message, Swift
           self.payload = .statsResponse(v)
         }
       }()
+      case 29: try {
+        var v: Totem_V1_TotemGraphQueryRequest?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .graphRequest(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .graphRequest(v)
+        }
+      }()
+      case 30: try {
+        var v: Totem_V1_TotemGraphQueryResponse?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .graphResponse(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .graphResponse(v)
+        }
+      }()
       default: break
       }
     }
@@ -2874,46 +2618,6 @@ nonisolated extension Totem_V1_TotemSessionMessage: SwiftProtobuf.Message, Swift
       guard case .libraryResponse(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
     }()
-    case .hnswStatsRequest?: try {
-      guard case .hnswStatsRequest(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
-    }()
-    case .hnswStatsResponse?: try {
-      guard case .hnswStatsResponse(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
-    }()
-    case .hnswGraphRequest?: try {
-      guard case .hnswGraphRequest(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
-    }()
-    case .hnswGraphResponse?: try {
-      guard case .hnswGraphResponse(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
-    }()
-    case .hnswNodeBatchRequest?: try {
-      guard case .hnswNodeBatchRequest(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
-    }()
-    case .hnswNodeBatchResponse?: try {
-      guard case .hnswNodeBatchResponse(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
-    }()
-    case .hnswNodeRequest?: try {
-      guard case .hnswNodeRequest(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
-    }()
-    case .hnswNodeResponse?: try {
-      guard case .hnswNodeResponse(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
-    }()
-    case .hnswDeleteNodeRequest?: try {
-      guard case .hnswDeleteNodeRequest(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
-    }()
-    case .hnswDeleteNodeResponse?: try {
-      guard case .hnswDeleteNodeResponse(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
-    }()
     case .updateGroupRequest?: try {
       guard case .updateGroupRequest(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
@@ -2937,6 +2641,14 @@ nonisolated extension Totem_V1_TotemSessionMessage: SwiftProtobuf.Message, Swift
     case .statsResponse?: try {
       guard case .statsResponse(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 28)
+    }()
+    case .graphRequest?: try {
+      guard case .graphRequest(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 29)
+    }()
+    case .graphResponse?: try {
+      guard case .graphResponse(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
     }()
     case nil: break
     }

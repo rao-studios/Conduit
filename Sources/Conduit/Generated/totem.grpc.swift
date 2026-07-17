@@ -2658,97 +2658,45 @@ extension Totem_V1_TotemLibrary.ClientProtocol {
     }
 }
 
-// MARK: - totem.v1.TotemHNSW
+// MARK: - totem.v1.TotemGraph
 
-/// Namespace containing generated types for the "totem.v1.TotemHNSW" service.
+/// Namespace containing generated types for the "totem.v1.TotemGraph" service.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-public enum Totem_V1_TotemHNSW {
-    /// Service descriptor for the "totem.v1.TotemHNSW" service.
-    public static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemHNSW")
+public enum Totem_V1_TotemGraph {
+    /// Service descriptor for the "totem.v1.TotemGraph" service.
+    public static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemGraph")
     /// Namespace for method metadata.
     public enum Method {
-        /// Namespace for "Stats" metadata.
-        public enum Stats {
-            /// Request type for "Stats".
-            public typealias Input = Totem_V1_TotemHNSWStatsRequest
-            /// Response type for "Stats".
-            public typealias Output = Totem_V1_TotemHNSWStatsResponse
-            /// Descriptor for "Stats".
+        /// Namespace for "Query" metadata.
+        public enum Query {
+            /// Request type for "Query".
+            public typealias Input = Totem_V1_TotemGraphQueryRequest
+            /// Response type for "Query".
+            public typealias Output = Totem_V1_TotemGraphQueryResponse
+            /// Descriptor for "Query".
             public static let descriptor = GRPCCore.MethodDescriptor(
-                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemHNSW"),
-                method: "Stats"
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemGraph"),
+                method: "Query"
             )
         }
-        /// Namespace for "Graph" metadata.
-        public enum Graph {
-            /// Request type for "Graph".
-            public typealias Input = Totem_V1_TotemHNSWGraphRequest
-            /// Response type for "Graph".
-            public typealias Output = Totem_V1_TotemHNSWGraphResponse
-            /// Descriptor for "Graph".
-            public static let descriptor = GRPCCore.MethodDescriptor(
-                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemHNSW"),
-                method: "Graph"
-            )
-        }
-        /// Namespace for "NodeBatch" metadata.
-        public enum NodeBatch {
-            /// Request type for "NodeBatch".
-            public typealias Input = Totem_V1_TotemHNSWNodeBatchRequest
-            /// Response type for "NodeBatch".
-            public typealias Output = Totem_V1_TotemHNSWNodeBatchResponse
-            /// Descriptor for "NodeBatch".
-            public static let descriptor = GRPCCore.MethodDescriptor(
-                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemHNSW"),
-                method: "NodeBatch"
-            )
-        }
-        /// Namespace for "Node" metadata.
-        public enum Node {
-            /// Request type for "Node".
-            public typealias Input = Totem_V1_TotemHNSWNodeRequest
-            /// Response type for "Node".
-            public typealias Output = Totem_V1_TotemHNSWNodeResponse
-            /// Descriptor for "Node".
-            public static let descriptor = GRPCCore.MethodDescriptor(
-                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemHNSW"),
-                method: "Node"
-            )
-        }
-        /// Namespace for "DeleteNode" metadata.
-        public enum DeleteNode {
-            /// Request type for "DeleteNode".
-            public typealias Input = Totem_V1_TotemHNSWDeleteNodeRequest
-            /// Response type for "DeleteNode".
-            public typealias Output = Totem_V1_TotemHNSWDeleteNodeResponse
-            /// Descriptor for "DeleteNode".
-            public static let descriptor = GRPCCore.MethodDescriptor(
-                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemHNSW"),
-                method: "DeleteNode"
-            )
-        }
-        /// Descriptors for all methods in the "totem.v1.TotemHNSW" service.
+        /// Descriptors for all methods in the "totem.v1.TotemGraph" service.
         public static let descriptors: [GRPCCore.MethodDescriptor] = [
-            Stats.descriptor,
-            Graph.descriptor,
-            NodeBatch.descriptor,
-            Node.descriptor,
-            DeleteNode.descriptor
+            Query.descriptor
         ]
     }
 }
 
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension GRPCCore.ServiceDescriptor {
-    /// Service descriptor for the "totem.v1.TotemHNSW" service.
-    public static let totem_v1_TotemHNSW = GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemHNSW")
+    /// Service descriptor for the "totem.v1.TotemGraph" service.
+    public static let totem_v1_TotemGraph = GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemGraph")
 }
 
-// MARK: totem.v1.TotemHNSW (server)
+// MARK: totem.v1.TotemGraph (server)
 
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-extension Totem_V1_TotemHNSW {
-    /// Streaming variant of the service protocol for the "totem.v1.TotemHNSW" service.
+extension Totem_V1_TotemGraph {
+    /// Streaming variant of the service protocol for the "totem.v1.TotemGraph" service.
     ///
     /// This protocol is the lowest-level of the service protocols generated for this service
     /// giving you the most flexibility over the implementation of your service. This comes at
@@ -2761,80 +2709,24 @@ extension Totem_V1_TotemHNSW {
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > ── Totem hosts this — Seer calls it for HNSW proxy routes ───────────────────
+    /// > ── Totem hosts this — Seer calls it for knowledge-graph proxy routes ────────
     public protocol StreamingServiceProtocol: GRPCCore.RegistrableRPCService {
-        /// Handle the "Stats" method.
+        /// Handle the "Query" method.
         ///
         /// - Parameters:
-        ///   - request: A streaming request of `Totem_V1_TotemHNSWStatsRequest` messages.
+        ///   - request: A streaming request of `Totem_V1_TotemGraphQueryRequest` messages.
         ///   - context: Context providing information about the RPC.
         /// - Throws: Any error which occurred during the processing of the request. Thrown errors
         ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
         ///     to an internal error.
-        /// - Returns: A streaming response of `Totem_V1_TotemHNSWStatsResponse` messages.
-        func stats(
-            request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWStatsRequest>,
+        /// - Returns: A streaming response of `Totem_V1_TotemGraphQueryResponse` messages.
+        func query(
+            request: GRPCCore.StreamingServerRequest<Totem_V1_TotemGraphQueryRequest>,
             context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWStatsResponse>
-
-        /// Handle the "Graph" method.
-        ///
-        /// - Parameters:
-        ///   - request: A streaming request of `Totem_V1_TotemHNSWGraphRequest` messages.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A streaming response of `Totem_V1_TotemHNSWGraphResponse` messages.
-        func graph(
-            request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWGraphRequest>,
-            context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWGraphResponse>
-
-        /// Handle the "NodeBatch" method.
-        ///
-        /// - Parameters:
-        ///   - request: A streaming request of `Totem_V1_TotemHNSWNodeBatchRequest` messages.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A streaming response of `Totem_V1_TotemHNSWNodeBatchResponse` messages.
-        func nodeBatch(
-            request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWNodeBatchRequest>,
-            context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWNodeBatchResponse>
-
-        /// Handle the "Node" method.
-        ///
-        /// - Parameters:
-        ///   - request: A streaming request of `Totem_V1_TotemHNSWNodeRequest` messages.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A streaming response of `Totem_V1_TotemHNSWNodeResponse` messages.
-        func node(
-            request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWNodeRequest>,
-            context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWNodeResponse>
-
-        /// Handle the "DeleteNode" method.
-        ///
-        /// - Parameters:
-        ///   - request: A streaming request of `Totem_V1_TotemHNSWDeleteNodeRequest` messages.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A streaming response of `Totem_V1_TotemHNSWDeleteNodeResponse` messages.
-        func deleteNode(
-            request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWDeleteNodeRequest>,
-            context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWDeleteNodeResponse>
+        ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemGraphQueryResponse>
     }
 
-    /// Service protocol for the "totem.v1.TotemHNSW" service.
+    /// Service protocol for the "totem.v1.TotemGraph" service.
     ///
     /// This protocol is higher level than ``StreamingServiceProtocol`` but lower level than
     /// the ``SimpleServiceProtocol``, it provides access to request and response metadata and
@@ -2844,80 +2736,24 @@ extension Totem_V1_TotemHNSW {
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > ── Totem hosts this — Seer calls it for HNSW proxy routes ───────────────────
-    public protocol ServiceProtocol: Totem_V1_TotemHNSW.StreamingServiceProtocol {
-        /// Handle the "Stats" method.
+    /// > ── Totem hosts this — Seer calls it for knowledge-graph proxy routes ────────
+    public protocol ServiceProtocol: Totem_V1_TotemGraph.StreamingServiceProtocol {
+        /// Handle the "Query" method.
         ///
         /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWStatsRequest` message.
+        ///   - request: A request containing a single `Totem_V1_TotemGraphQueryRequest` message.
         ///   - context: Context providing information about the RPC.
         /// - Throws: Any error which occurred during the processing of the request. Thrown errors
         ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
         ///     to an internal error.
-        /// - Returns: A response containing a single `Totem_V1_TotemHNSWStatsResponse` message.
-        func stats(
-            request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWStatsRequest>,
+        /// - Returns: A response containing a single `Totem_V1_TotemGraphQueryResponse` message.
+        func query(
+            request: GRPCCore.ServerRequest<Totem_V1_TotemGraphQueryRequest>,
             context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWStatsResponse>
-
-        /// Handle the "Graph" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWGraphRequest` message.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A response containing a single `Totem_V1_TotemHNSWGraphResponse` message.
-        func graph(
-            request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWGraphRequest>,
-            context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWGraphResponse>
-
-        /// Handle the "NodeBatch" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWNodeBatchRequest` message.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A response containing a single `Totem_V1_TotemHNSWNodeBatchResponse` message.
-        func nodeBatch(
-            request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWNodeBatchRequest>,
-            context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWNodeBatchResponse>
-
-        /// Handle the "Node" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWNodeRequest` message.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A response containing a single `Totem_V1_TotemHNSWNodeResponse` message.
-        func node(
-            request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWNodeRequest>,
-            context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWNodeResponse>
-
-        /// Handle the "DeleteNode" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWDeleteNodeRequest` message.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A response containing a single `Totem_V1_TotemHNSWDeleteNodeResponse` message.
-        func deleteNode(
-            request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWDeleteNodeRequest>,
-            context: GRPCCore.ServerContext
-        ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWDeleteNodeResponse>
+        ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemGraphQueryResponse>
     }
 
-    /// Simple service protocol for the "totem.v1.TotemHNSW" service.
+    /// Simple service protocol for the "totem.v1.TotemGraph" service.
     ///
     /// This is the highest level protocol for the service. The API is the easiest to use but
     /// doesn't provide access to request or response metadata. If you need access to these
@@ -2925,134 +2761,34 @@ extension Totem_V1_TotemHNSW {
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > ── Totem hosts this — Seer calls it for HNSW proxy routes ───────────────────
-    public protocol SimpleServiceProtocol: Totem_V1_TotemHNSW.ServiceProtocol {
-        /// Handle the "Stats" method.
+    /// > ── Totem hosts this — Seer calls it for knowledge-graph proxy routes ────────
+    public protocol SimpleServiceProtocol: Totem_V1_TotemGraph.ServiceProtocol {
+        /// Handle the "Query" method.
         ///
         /// - Parameters:
-        ///   - request: A `Totem_V1_TotemHNSWStatsRequest` message.
+        ///   - request: A `Totem_V1_TotemGraphQueryRequest` message.
         ///   - context: Context providing information about the RPC.
         /// - Throws: Any error which occurred during the processing of the request. Thrown errors
         ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
         ///     to an internal error.
-        /// - Returns: A `Totem_V1_TotemHNSWStatsResponse` to respond with.
-        func stats(
-            request: Totem_V1_TotemHNSWStatsRequest,
+        /// - Returns: A `Totem_V1_TotemGraphQueryResponse` to respond with.
+        func query(
+            request: Totem_V1_TotemGraphQueryRequest,
             context: GRPCCore.ServerContext
-        ) async throws -> Totem_V1_TotemHNSWStatsResponse
-
-        /// Handle the "Graph" method.
-        ///
-        /// - Parameters:
-        ///   - request: A `Totem_V1_TotemHNSWGraphRequest` message.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A `Totem_V1_TotemHNSWGraphResponse` to respond with.
-        func graph(
-            request: Totem_V1_TotemHNSWGraphRequest,
-            context: GRPCCore.ServerContext
-        ) async throws -> Totem_V1_TotemHNSWGraphResponse
-
-        /// Handle the "NodeBatch" method.
-        ///
-        /// - Parameters:
-        ///   - request: A `Totem_V1_TotemHNSWNodeBatchRequest` message.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A `Totem_V1_TotemHNSWNodeBatchResponse` to respond with.
-        func nodeBatch(
-            request: Totem_V1_TotemHNSWNodeBatchRequest,
-            context: GRPCCore.ServerContext
-        ) async throws -> Totem_V1_TotemHNSWNodeBatchResponse
-
-        /// Handle the "Node" method.
-        ///
-        /// - Parameters:
-        ///   - request: A `Totem_V1_TotemHNSWNodeRequest` message.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A `Totem_V1_TotemHNSWNodeResponse` to respond with.
-        func node(
-            request: Totem_V1_TotemHNSWNodeRequest,
-            context: GRPCCore.ServerContext
-        ) async throws -> Totem_V1_TotemHNSWNodeResponse
-
-        /// Handle the "DeleteNode" method.
-        ///
-        /// - Parameters:
-        ///   - request: A `Totem_V1_TotemHNSWDeleteNodeRequest` message.
-        ///   - context: Context providing information about the RPC.
-        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
-        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
-        ///     to an internal error.
-        /// - Returns: A `Totem_V1_TotemHNSWDeleteNodeResponse` to respond with.
-        func deleteNode(
-            request: Totem_V1_TotemHNSWDeleteNodeRequest,
-            context: GRPCCore.ServerContext
-        ) async throws -> Totem_V1_TotemHNSWDeleteNodeResponse
+        ) async throws -> Totem_V1_TotemGraphQueryResponse
     }
 }
 
 // Default implementation of 'registerMethods(with:)'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-extension Totem_V1_TotemHNSW.StreamingServiceProtocol {
+extension Totem_V1_TotemGraph.StreamingServiceProtocol {
     public func registerMethods<Transport>(with router: inout GRPCCore.RPCRouter<Transport>) where Transport: GRPCCore.ServerTransport {
         router.registerHandler(
-            forMethod: Totem_V1_TotemHNSW.Method.Stats.descriptor,
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWStatsRequest>(),
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWStatsResponse>(),
+            forMethod: Totem_V1_TotemGraph.Method.Query.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemGraphQueryRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemGraphQueryResponse>(),
             handler: { request, context in
-                try await self.stats(
-                    request: request,
-                    context: context
-                )
-            }
-        )
-        router.registerHandler(
-            forMethod: Totem_V1_TotemHNSW.Method.Graph.descriptor,
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWGraphRequest>(),
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWGraphResponse>(),
-            handler: { request, context in
-                try await self.graph(
-                    request: request,
-                    context: context
-                )
-            }
-        )
-        router.registerHandler(
-            forMethod: Totem_V1_TotemHNSW.Method.NodeBatch.descriptor,
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWNodeBatchRequest>(),
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWNodeBatchResponse>(),
-            handler: { request, context in
-                try await self.nodeBatch(
-                    request: request,
-                    context: context
-                )
-            }
-        )
-        router.registerHandler(
-            forMethod: Totem_V1_TotemHNSW.Method.Node.descriptor,
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWNodeRequest>(),
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWNodeResponse>(),
-            handler: { request, context in
-                try await self.node(
-                    request: request,
-                    context: context
-                )
-            }
-        )
-        router.registerHandler(
-            forMethod: Totem_V1_TotemHNSW.Method.DeleteNode.descriptor,
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWDeleteNodeRequest>(),
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWDeleteNodeResponse>(),
-            handler: { request, context in
-                try await self.deleteNode(
+                try await self.query(
                     request: request,
                     context: context
                 )
@@ -3063,56 +2799,12 @@ extension Totem_V1_TotemHNSW.StreamingServiceProtocol {
 
 // Default implementation of streaming methods from 'StreamingServiceProtocol'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-extension Totem_V1_TotemHNSW.ServiceProtocol {
-    public func stats(
-        request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWStatsRequest>,
+extension Totem_V1_TotemGraph.ServiceProtocol {
+    public func query(
+        request: GRPCCore.StreamingServerRequest<Totem_V1_TotemGraphQueryRequest>,
         context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWStatsResponse> {
-        let response = try await self.stats(
-            request: GRPCCore.ServerRequest(stream: request),
-            context: context
-        )
-        return GRPCCore.StreamingServerResponse(single: response)
-    }
-
-    public func graph(
-        request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWGraphRequest>,
-        context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWGraphResponse> {
-        let response = try await self.graph(
-            request: GRPCCore.ServerRequest(stream: request),
-            context: context
-        )
-        return GRPCCore.StreamingServerResponse(single: response)
-    }
-
-    public func nodeBatch(
-        request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWNodeBatchRequest>,
-        context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWNodeBatchResponse> {
-        let response = try await self.nodeBatch(
-            request: GRPCCore.ServerRequest(stream: request),
-            context: context
-        )
-        return GRPCCore.StreamingServerResponse(single: response)
-    }
-
-    public func node(
-        request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWNodeRequest>,
-        context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWNodeResponse> {
-        let response = try await self.node(
-            request: GRPCCore.ServerRequest(stream: request),
-            context: context
-        )
-        return GRPCCore.StreamingServerResponse(single: response)
-    }
-
-    public func deleteNode(
-        request: GRPCCore.StreamingServerRequest<Totem_V1_TotemHNSWDeleteNodeRequest>,
-        context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemHNSWDeleteNodeResponse> {
-        let response = try await self.deleteNode(
+    ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemGraphQueryResponse> {
+        let response = try await self.query(
             request: GRPCCore.ServerRequest(stream: request),
             context: context
         )
@@ -3122,65 +2814,13 @@ extension Totem_V1_TotemHNSW.ServiceProtocol {
 
 // Default implementation of methods from 'ServiceProtocol'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-extension Totem_V1_TotemHNSW.SimpleServiceProtocol {
-    public func stats(
-        request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWStatsRequest>,
+extension Totem_V1_TotemGraph.SimpleServiceProtocol {
+    public func query(
+        request: GRPCCore.ServerRequest<Totem_V1_TotemGraphQueryRequest>,
         context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWStatsResponse> {
-        return GRPCCore.ServerResponse<Totem_V1_TotemHNSWStatsResponse>(
-            message: try await self.stats(
-                request: request.message,
-                context: context
-            ),
-            metadata: [:]
-        )
-    }
-
-    public func graph(
-        request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWGraphRequest>,
-        context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWGraphResponse> {
-        return GRPCCore.ServerResponse<Totem_V1_TotemHNSWGraphResponse>(
-            message: try await self.graph(
-                request: request.message,
-                context: context
-            ),
-            metadata: [:]
-        )
-    }
-
-    public func nodeBatch(
-        request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWNodeBatchRequest>,
-        context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWNodeBatchResponse> {
-        return GRPCCore.ServerResponse<Totem_V1_TotemHNSWNodeBatchResponse>(
-            message: try await self.nodeBatch(
-                request: request.message,
-                context: context
-            ),
-            metadata: [:]
-        )
-    }
-
-    public func node(
-        request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWNodeRequest>,
-        context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWNodeResponse> {
-        return GRPCCore.ServerResponse<Totem_V1_TotemHNSWNodeResponse>(
-            message: try await self.node(
-                request: request.message,
-                context: context
-            ),
-            metadata: [:]
-        )
-    }
-
-    public func deleteNode(
-        request: GRPCCore.ServerRequest<Totem_V1_TotemHNSWDeleteNodeRequest>,
-        context: GRPCCore.ServerContext
-    ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemHNSWDeleteNodeResponse> {
-        return GRPCCore.ServerResponse<Totem_V1_TotemHNSWDeleteNodeResponse>(
-            message: try await self.deleteNode(
+    ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemGraphQueryResponse> {
+        return GRPCCore.ServerResponse<Totem_V1_TotemGraphQueryResponse>(
+            message: try await self.query(
                 request: request.message,
                 context: context
             ),
@@ -3189,116 +2829,40 @@ extension Totem_V1_TotemHNSW.SimpleServiceProtocol {
     }
 }
 
-// MARK: totem.v1.TotemHNSW (client)
+// MARK: totem.v1.TotemGraph (client)
 
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-extension Totem_V1_TotemHNSW {
-    /// Generated client protocol for the "totem.v1.TotemHNSW" service.
+extension Totem_V1_TotemGraph {
+    /// Generated client protocol for the "totem.v1.TotemGraph" service.
     ///
     /// You don't need to implement this protocol directly, use the generated
     /// implementation, ``Client``.
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > ── Totem hosts this — Seer calls it for HNSW proxy routes ───────────────────
+    /// > ── Totem hosts this — Seer calls it for knowledge-graph proxy routes ────────
     public protocol ClientProtocol: Sendable {
-        /// Call the "Stats" method.
+        /// Call the "Query" method.
         ///
         /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWStatsRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWStatsRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWStatsResponse` messages.
+        ///   - request: A request containing a single `Totem_V1_TotemGraphQueryRequest` message.
+        ///   - serializer: A serializer for `Totem_V1_TotemGraphQueryRequest` messages.
+        ///   - deserializer: A deserializer for `Totem_V1_TotemGraphQueryResponse` messages.
         ///   - options: Options to apply to this RPC.
         ///   - handleResponse: A closure which handles the response, the result of which is
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        func stats<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWStatsRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWStatsRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWStatsResponse>,
+        func query<Result>(
+            request: GRPCCore.ClientRequest<Totem_V1_TotemGraphQueryRequest>,
+            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemGraphQueryRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemGraphQueryResponse>,
             options: GRPCCore.CallOptions,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWStatsResponse>) async throws -> Result
-        ) async throws -> Result where Result: Sendable
-
-        /// Call the "Graph" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWGraphRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWGraphRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWGraphResponse` messages.
-        ///   - options: Options to apply to this RPC.
-        ///   - handleResponse: A closure which handles the response, the result of which is
-        ///       returned to the caller. Returning from the closure will cancel the RPC if it
-        ///       hasn't already finished.
-        /// - Returns: The result of `handleResponse`.
-        func graph<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWGraphRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWGraphRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWGraphResponse>,
-            options: GRPCCore.CallOptions,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWGraphResponse>) async throws -> Result
-        ) async throws -> Result where Result: Sendable
-
-        /// Call the "NodeBatch" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWNodeBatchRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWNodeBatchRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWNodeBatchResponse` messages.
-        ///   - options: Options to apply to this RPC.
-        ///   - handleResponse: A closure which handles the response, the result of which is
-        ///       returned to the caller. Returning from the closure will cancel the RPC if it
-        ///       hasn't already finished.
-        /// - Returns: The result of `handleResponse`.
-        func nodeBatch<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWNodeBatchRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWNodeBatchRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWNodeBatchResponse>,
-            options: GRPCCore.CallOptions,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWNodeBatchResponse>) async throws -> Result
-        ) async throws -> Result where Result: Sendable
-
-        /// Call the "Node" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWNodeRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWNodeRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWNodeResponse` messages.
-        ///   - options: Options to apply to this RPC.
-        ///   - handleResponse: A closure which handles the response, the result of which is
-        ///       returned to the caller. Returning from the closure will cancel the RPC if it
-        ///       hasn't already finished.
-        /// - Returns: The result of `handleResponse`.
-        func node<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWNodeRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWNodeRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWNodeResponse>,
-            options: GRPCCore.CallOptions,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWNodeResponse>) async throws -> Result
-        ) async throws -> Result where Result: Sendable
-
-        /// Call the "DeleteNode" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWDeleteNodeRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWDeleteNodeRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWDeleteNodeResponse` messages.
-        ///   - options: Options to apply to this RPC.
-        ///   - handleResponse: A closure which handles the response, the result of which is
-        ///       returned to the caller. Returning from the closure will cancel the RPC if it
-        ///       hasn't already finished.
-        /// - Returns: The result of `handleResponse`.
-        func deleteNode<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWDeleteNodeRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWDeleteNodeRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWDeleteNodeResponse>,
-            options: GRPCCore.CallOptions,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWDeleteNodeResponse>) async throws -> Result
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemGraphQueryResponse>) async throws -> Result
         ) async throws -> Result where Result: Sendable
     }
 
-    /// Generated client for the "totem.v1.TotemHNSW" service.
+    /// Generated client for the "totem.v1.TotemGraph" service.
     ///
     /// The ``Client`` provides an implementation of ``ClientProtocol`` which wraps
     /// a `GRPCCore.GRPCCClient`. The underlying `GRPCClient` provides the long-lived
@@ -3306,7 +2870,7 @@ extension Totem_V1_TotemHNSW {
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > ── Totem hosts this — Seer calls it for HNSW proxy routes ───────────────────
+    /// > ── Totem hosts this — Seer calls it for knowledge-graph proxy routes ────────
     public struct Client<Transport>: ClientProtocol where Transport: GRPCCore.ClientTransport {
         private let client: GRPCCore.GRPCClient<Transport>
 
@@ -3318,149 +2882,29 @@ extension Totem_V1_TotemHNSW {
             self.client = client
         }
 
-        /// Call the "Stats" method.
+        /// Call the "Query" method.
         ///
         /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWStatsRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWStatsRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWStatsResponse` messages.
+        ///   - request: A request containing a single `Totem_V1_TotemGraphQueryRequest` message.
+        ///   - serializer: A serializer for `Totem_V1_TotemGraphQueryRequest` messages.
+        ///   - deserializer: A deserializer for `Totem_V1_TotemGraphQueryResponse` messages.
         ///   - options: Options to apply to this RPC.
         ///   - handleResponse: A closure which handles the response, the result of which is
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func stats<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWStatsRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWStatsRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWStatsResponse>,
+        public func query<Result>(
+            request: GRPCCore.ClientRequest<Totem_V1_TotemGraphQueryRequest>,
+            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemGraphQueryRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemGraphQueryResponse>,
             options: GRPCCore.CallOptions = .defaults,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWStatsResponse>) async throws -> Result = { response in
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemGraphQueryResponse>) async throws -> Result = { response in
                 try response.message
             }
         ) async throws -> Result where Result: Sendable {
             try await self.client.unary(
                 request: request,
-                descriptor: Totem_V1_TotemHNSW.Method.Stats.descriptor,
-                serializer: serializer,
-                deserializer: deserializer,
-                options: options,
-                onResponse: handleResponse
-            )
-        }
-
-        /// Call the "Graph" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWGraphRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWGraphRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWGraphResponse` messages.
-        ///   - options: Options to apply to this RPC.
-        ///   - handleResponse: A closure which handles the response, the result of which is
-        ///       returned to the caller. Returning from the closure will cancel the RPC if it
-        ///       hasn't already finished.
-        /// - Returns: The result of `handleResponse`.
-        public func graph<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWGraphRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWGraphRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWGraphResponse>,
-            options: GRPCCore.CallOptions = .defaults,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWGraphResponse>) async throws -> Result = { response in
-                try response.message
-            }
-        ) async throws -> Result where Result: Sendable {
-            try await self.client.unary(
-                request: request,
-                descriptor: Totem_V1_TotemHNSW.Method.Graph.descriptor,
-                serializer: serializer,
-                deserializer: deserializer,
-                options: options,
-                onResponse: handleResponse
-            )
-        }
-
-        /// Call the "NodeBatch" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWNodeBatchRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWNodeBatchRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWNodeBatchResponse` messages.
-        ///   - options: Options to apply to this RPC.
-        ///   - handleResponse: A closure which handles the response, the result of which is
-        ///       returned to the caller. Returning from the closure will cancel the RPC if it
-        ///       hasn't already finished.
-        /// - Returns: The result of `handleResponse`.
-        public func nodeBatch<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWNodeBatchRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWNodeBatchRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWNodeBatchResponse>,
-            options: GRPCCore.CallOptions = .defaults,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWNodeBatchResponse>) async throws -> Result = { response in
-                try response.message
-            }
-        ) async throws -> Result where Result: Sendable {
-            try await self.client.unary(
-                request: request,
-                descriptor: Totem_V1_TotemHNSW.Method.NodeBatch.descriptor,
-                serializer: serializer,
-                deserializer: deserializer,
-                options: options,
-                onResponse: handleResponse
-            )
-        }
-
-        /// Call the "Node" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWNodeRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWNodeRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWNodeResponse` messages.
-        ///   - options: Options to apply to this RPC.
-        ///   - handleResponse: A closure which handles the response, the result of which is
-        ///       returned to the caller. Returning from the closure will cancel the RPC if it
-        ///       hasn't already finished.
-        /// - Returns: The result of `handleResponse`.
-        public func node<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWNodeRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWNodeRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWNodeResponse>,
-            options: GRPCCore.CallOptions = .defaults,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWNodeResponse>) async throws -> Result = { response in
-                try response.message
-            }
-        ) async throws -> Result where Result: Sendable {
-            try await self.client.unary(
-                request: request,
-                descriptor: Totem_V1_TotemHNSW.Method.Node.descriptor,
-                serializer: serializer,
-                deserializer: deserializer,
-                options: options,
-                onResponse: handleResponse
-            )
-        }
-
-        /// Call the "DeleteNode" method.
-        ///
-        /// - Parameters:
-        ///   - request: A request containing a single `Totem_V1_TotemHNSWDeleteNodeRequest` message.
-        ///   - serializer: A serializer for `Totem_V1_TotemHNSWDeleteNodeRequest` messages.
-        ///   - deserializer: A deserializer for `Totem_V1_TotemHNSWDeleteNodeResponse` messages.
-        ///   - options: Options to apply to this RPC.
-        ///   - handleResponse: A closure which handles the response, the result of which is
-        ///       returned to the caller. Returning from the closure will cancel the RPC if it
-        ///       hasn't already finished.
-        /// - Returns: The result of `handleResponse`.
-        public func deleteNode<Result>(
-            request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWDeleteNodeRequest>,
-            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemHNSWDeleteNodeRequest>,
-            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemHNSWDeleteNodeResponse>,
-            options: GRPCCore.CallOptions = .defaults,
-            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWDeleteNodeResponse>) async throws -> Result = { response in
-                try response.message
-            }
-        ) async throws -> Result where Result: Sendable {
-            try await self.client.unary(
-                request: request,
-                descriptor: Totem_V1_TotemHNSW.Method.DeleteNode.descriptor,
+                descriptor: Totem_V1_TotemGraph.Method.Query.descriptor,
                 serializer: serializer,
                 deserializer: deserializer,
                 options: options,
@@ -3472,127 +2916,27 @@ extension Totem_V1_TotemHNSW {
 
 // Helpers providing default arguments to 'ClientProtocol' methods.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-extension Totem_V1_TotemHNSW.ClientProtocol {
-    /// Call the "Stats" method.
+extension Totem_V1_TotemGraph.ClientProtocol {
+    /// Call the "Query" method.
     ///
     /// - Parameters:
-    ///   - request: A request containing a single `Totem_V1_TotemHNSWStatsRequest` message.
+    ///   - request: A request containing a single `Totem_V1_TotemGraphQueryRequest` message.
     ///   - options: Options to apply to this RPC.
     ///   - handleResponse: A closure which handles the response, the result of which is
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func stats<Result>(
-        request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWStatsRequest>,
+    public func query<Result>(
+        request: GRPCCore.ClientRequest<Totem_V1_TotemGraphQueryRequest>,
         options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWStatsResponse>) async throws -> Result = { response in
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemGraphQueryResponse>) async throws -> Result = { response in
             try response.message
         }
     ) async throws -> Result where Result: Sendable {
-        try await self.stats(
+        try await self.query(
             request: request,
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWStatsRequest>(),
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWStatsResponse>(),
-            options: options,
-            onResponse: handleResponse
-        )
-    }
-
-    /// Call the "Graph" method.
-    ///
-    /// - Parameters:
-    ///   - request: A request containing a single `Totem_V1_TotemHNSWGraphRequest` message.
-    ///   - options: Options to apply to this RPC.
-    ///   - handleResponse: A closure which handles the response, the result of which is
-    ///       returned to the caller. Returning from the closure will cancel the RPC if it
-    ///       hasn't already finished.
-    /// - Returns: The result of `handleResponse`.
-    public func graph<Result>(
-        request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWGraphRequest>,
-        options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWGraphResponse>) async throws -> Result = { response in
-            try response.message
-        }
-    ) async throws -> Result where Result: Sendable {
-        try await self.graph(
-            request: request,
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWGraphRequest>(),
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWGraphResponse>(),
-            options: options,
-            onResponse: handleResponse
-        )
-    }
-
-    /// Call the "NodeBatch" method.
-    ///
-    /// - Parameters:
-    ///   - request: A request containing a single `Totem_V1_TotemHNSWNodeBatchRequest` message.
-    ///   - options: Options to apply to this RPC.
-    ///   - handleResponse: A closure which handles the response, the result of which is
-    ///       returned to the caller. Returning from the closure will cancel the RPC if it
-    ///       hasn't already finished.
-    /// - Returns: The result of `handleResponse`.
-    public func nodeBatch<Result>(
-        request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWNodeBatchRequest>,
-        options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWNodeBatchResponse>) async throws -> Result = { response in
-            try response.message
-        }
-    ) async throws -> Result where Result: Sendable {
-        try await self.nodeBatch(
-            request: request,
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWNodeBatchRequest>(),
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWNodeBatchResponse>(),
-            options: options,
-            onResponse: handleResponse
-        )
-    }
-
-    /// Call the "Node" method.
-    ///
-    /// - Parameters:
-    ///   - request: A request containing a single `Totem_V1_TotemHNSWNodeRequest` message.
-    ///   - options: Options to apply to this RPC.
-    ///   - handleResponse: A closure which handles the response, the result of which is
-    ///       returned to the caller. Returning from the closure will cancel the RPC if it
-    ///       hasn't already finished.
-    /// - Returns: The result of `handleResponse`.
-    public func node<Result>(
-        request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWNodeRequest>,
-        options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWNodeResponse>) async throws -> Result = { response in
-            try response.message
-        }
-    ) async throws -> Result where Result: Sendable {
-        try await self.node(
-            request: request,
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWNodeRequest>(),
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWNodeResponse>(),
-            options: options,
-            onResponse: handleResponse
-        )
-    }
-
-    /// Call the "DeleteNode" method.
-    ///
-    /// - Parameters:
-    ///   - request: A request containing a single `Totem_V1_TotemHNSWDeleteNodeRequest` message.
-    ///   - options: Options to apply to this RPC.
-    ///   - handleResponse: A closure which handles the response, the result of which is
-    ///       returned to the caller. Returning from the closure will cancel the RPC if it
-    ///       hasn't already finished.
-    /// - Returns: The result of `handleResponse`.
-    public func deleteNode<Result>(
-        request: GRPCCore.ClientRequest<Totem_V1_TotemHNSWDeleteNodeRequest>,
-        options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWDeleteNodeResponse>) async throws -> Result = { response in
-            try response.message
-        }
-    ) async throws -> Result where Result: Sendable {
-        try await self.deleteNode(
-            request: request,
-            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemHNSWDeleteNodeRequest>(),
-            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemHNSWDeleteNodeResponse>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemGraphQueryRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemGraphQueryResponse>(),
             options: options,
             onResponse: handleResponse
         )
@@ -3601,8 +2945,8 @@ extension Totem_V1_TotemHNSW.ClientProtocol {
 
 // Helpers providing sugared APIs for 'ClientProtocol' methods.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-extension Totem_V1_TotemHNSW.ClientProtocol {
-    /// Call the "Stats" method.
+extension Totem_V1_TotemGraph.ClientProtocol {
+    /// Call the "Query" method.
     ///
     /// - Parameters:
     ///   - message: request message to send.
@@ -3612,135 +2956,19 @@ extension Totem_V1_TotemHNSW.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func stats<Result>(
-        _ message: Totem_V1_TotemHNSWStatsRequest,
+    public func query<Result>(
+        _ message: Totem_V1_TotemGraphQueryRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWStatsResponse>) async throws -> Result = { response in
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemGraphQueryResponse>) async throws -> Result = { response in
             try response.message
         }
     ) async throws -> Result where Result: Sendable {
-        let request = GRPCCore.ClientRequest<Totem_V1_TotemHNSWStatsRequest>(
+        let request = GRPCCore.ClientRequest<Totem_V1_TotemGraphQueryRequest>(
             message: message,
             metadata: metadata
         )
-        return try await self.stats(
-            request: request,
-            options: options,
-            onResponse: handleResponse
-        )
-    }
-
-    /// Call the "Graph" method.
-    ///
-    /// - Parameters:
-    ///   - message: request message to send.
-    ///   - metadata: Additional metadata to send, defaults to empty.
-    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
-    ///   - handleResponse: A closure which handles the response, the result of which is
-    ///       returned to the caller. Returning from the closure will cancel the RPC if it
-    ///       hasn't already finished.
-    /// - Returns: The result of `handleResponse`.
-    public func graph<Result>(
-        _ message: Totem_V1_TotemHNSWGraphRequest,
-        metadata: GRPCCore.Metadata = [:],
-        options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWGraphResponse>) async throws -> Result = { response in
-            try response.message
-        }
-    ) async throws -> Result where Result: Sendable {
-        let request = GRPCCore.ClientRequest<Totem_V1_TotemHNSWGraphRequest>(
-            message: message,
-            metadata: metadata
-        )
-        return try await self.graph(
-            request: request,
-            options: options,
-            onResponse: handleResponse
-        )
-    }
-
-    /// Call the "NodeBatch" method.
-    ///
-    /// - Parameters:
-    ///   - message: request message to send.
-    ///   - metadata: Additional metadata to send, defaults to empty.
-    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
-    ///   - handleResponse: A closure which handles the response, the result of which is
-    ///       returned to the caller. Returning from the closure will cancel the RPC if it
-    ///       hasn't already finished.
-    /// - Returns: The result of `handleResponse`.
-    public func nodeBatch<Result>(
-        _ message: Totem_V1_TotemHNSWNodeBatchRequest,
-        metadata: GRPCCore.Metadata = [:],
-        options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWNodeBatchResponse>) async throws -> Result = { response in
-            try response.message
-        }
-    ) async throws -> Result where Result: Sendable {
-        let request = GRPCCore.ClientRequest<Totem_V1_TotemHNSWNodeBatchRequest>(
-            message: message,
-            metadata: metadata
-        )
-        return try await self.nodeBatch(
-            request: request,
-            options: options,
-            onResponse: handleResponse
-        )
-    }
-
-    /// Call the "Node" method.
-    ///
-    /// - Parameters:
-    ///   - message: request message to send.
-    ///   - metadata: Additional metadata to send, defaults to empty.
-    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
-    ///   - handleResponse: A closure which handles the response, the result of which is
-    ///       returned to the caller. Returning from the closure will cancel the RPC if it
-    ///       hasn't already finished.
-    /// - Returns: The result of `handleResponse`.
-    public func node<Result>(
-        _ message: Totem_V1_TotemHNSWNodeRequest,
-        metadata: GRPCCore.Metadata = [:],
-        options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWNodeResponse>) async throws -> Result = { response in
-            try response.message
-        }
-    ) async throws -> Result where Result: Sendable {
-        let request = GRPCCore.ClientRequest<Totem_V1_TotemHNSWNodeRequest>(
-            message: message,
-            metadata: metadata
-        )
-        return try await self.node(
-            request: request,
-            options: options,
-            onResponse: handleResponse
-        )
-    }
-
-    /// Call the "DeleteNode" method.
-    ///
-    /// - Parameters:
-    ///   - message: request message to send.
-    ///   - metadata: Additional metadata to send, defaults to empty.
-    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
-    ///   - handleResponse: A closure which handles the response, the result of which is
-    ///       returned to the caller. Returning from the closure will cancel the RPC if it
-    ///       hasn't already finished.
-    /// - Returns: The result of `handleResponse`.
-    public func deleteNode<Result>(
-        _ message: Totem_V1_TotemHNSWDeleteNodeRequest,
-        metadata: GRPCCore.Metadata = [:],
-        options: GRPCCore.CallOptions = .defaults,
-        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemHNSWDeleteNodeResponse>) async throws -> Result = { response in
-            try response.message
-        }
-    ) async throws -> Result where Result: Sendable {
-        let request = GRPCCore.ClientRequest<Totem_V1_TotemHNSWDeleteNodeRequest>(
-            message: message,
-            metadata: metadata
-        )
-        return try await self.deleteNode(
+        return try await self.query(
             request: request,
             options: options,
             onResponse: handleResponse

@@ -49,35 +49,11 @@ public actor TotemQueryClient: Sendable {
         return r
     }
 
-    // MARK: - HNSW
+    // MARK: - Graph
 
-    public func hnswStats(_ request: Totem_V1_TotemHNSWStatsRequest, totem: TotemNode) async throws -> Totem_V1_TotemHNSWStatsResponse {
-        let resp = try await send({ $0.payload = .hnswStatsRequest(request) }, to: totem)
-        guard case .hnswStatsResponse(let r) = resp.payload else { throw TotemSessionError.unexpectedPayload }
-        return r
-    }
-
-    public func hnswGraph(_ request: Totem_V1_TotemHNSWGraphRequest, totem: TotemNode) async throws -> Totem_V1_TotemHNSWGraphResponse {
-        let resp = try await send({ $0.payload = .hnswGraphRequest(request) }, to: totem)
-        guard case .hnswGraphResponse(let r) = resp.payload else { throw TotemSessionError.unexpectedPayload }
-        return r
-    }
-
-    public func hnswNodeBatch(_ request: Totem_V1_TotemHNSWNodeBatchRequest, totem: TotemNode) async throws -> Totem_V1_TotemHNSWNodeBatchResponse {
-        let resp = try await send({ $0.payload = .hnswNodeBatchRequest(request) }, to: totem)
-        guard case .hnswNodeBatchResponse(let r) = resp.payload else { throw TotemSessionError.unexpectedPayload }
-        return r
-    }
-
-    public func hnswNode(_ request: Totem_V1_TotemHNSWNodeRequest, totem: TotemNode) async throws -> Totem_V1_TotemHNSWNodeResponse {
-        let resp = try await send({ $0.payload = .hnswNodeRequest(request) }, to: totem)
-        guard case .hnswNodeResponse(let r) = resp.payload else { throw TotemSessionError.unexpectedPayload }
-        return r
-    }
-
-    public func hnswDeleteNode(_ request: Totem_V1_TotemHNSWDeleteNodeRequest, totem: TotemNode) async throws -> Totem_V1_TotemHNSWDeleteNodeResponse {
-        let resp = try await send({ $0.payload = .hnswDeleteNodeRequest(request) }, to: totem)
-        guard case .hnswDeleteNodeResponse(let r) = resp.payload else { throw TotemSessionError.unexpectedPayload }
+    public func graph(_ request: Totem_V1_TotemGraphQueryRequest, totem: TotemNode) async throws -> Totem_V1_TotemGraphQueryResponse {
+        let resp = try await send({ $0.payload = .graphRequest(request) }, to: totem)
+        guard case .graphResponse(let r) = resp.payload else { throw TotemSessionError.unexpectedPayload }
         return r
     }
 
