@@ -170,6 +170,10 @@ message TotemStatsResponse {
 // ── Totem hosts this — Seer calls it for library fan-out ─────────────────────
 service TotemLibrary {
   rpc Library (TotemLibraryRequest) returns (TotemLibraryResponse);
+  // Full document content by id — the partition texts reassembled in stored
+  // order. Access rule matches search/graph: caller-owned or public docs
+  // only; anything else is silently omitted from the response.
+  rpc Documents (TotemDocumentsRequest) returns (TotemDocumentsResponse);
 }
 
 message TotemDocument {
@@ -203,6 +207,26 @@ message TotemLibraryRequest {
 message TotemLibraryResponse {
   repeated TotemGroup groups   = 1;
   bool                has_more = 2;  // true if more pages follow
+}
+
+message TotemDocumentsRequest {
+  string          owner_id     = 1;
+  repeated string document_ids = 2;
+}
+
+message TotemDocumentContent {
+  string          id          = 1;
+  string          name        = 2;
+  string          owner_id    = 3;
+  string          group_id    = 4;
+  string          group_label = 5;
+  int64           created_at  = 6;
+  repeated string texts       = 7;  // partition texts in stored order; join for full content
+  string          media_type  = 8;
+}
+
+message TotemDocumentsResponse {
+  repeated TotemDocumentContent documents = 1;  // inaccessible/unknown ids omitted
 }
 
 // ── Totem hosts this — Seer calls it for knowledge-graph proxy routes ────────
@@ -293,6 +317,8 @@ message TotemSessionMessage {
     TotemStatsResponse           stats_response            = 28;
     TotemGraphQueryRequest       graph_request             = 29;
     TotemGraphQueryResponse      graph_response            = 30;
+    TotemDocumentsRequest        documents_request         = 31;
+    TotemDocumentsResponse       documents_response        = 32;
   }
 }
 

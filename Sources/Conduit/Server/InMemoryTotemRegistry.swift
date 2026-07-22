@@ -21,9 +21,13 @@ public actor InMemoryTotemRegistry: TotemRegistry {
 
     public func heartbeatNode(totemId: UUID) async {
         guard var node = nodes[totemId] else { return }
+        // heartbeatNode fires on EVERY session message; broadcasting (a full
+        // filter+sort fanned out to all subscribers) only makes sense when a
+        // node's active state actually flips, not per message.
+        let wasActive = node.isActive
         node.lastSeen = .now
         nodes[totemId] = node
-        broadcast()
+        if !wasActive { broadcast() }
     }
 
     public func updateNodeAvailability(totemId: UUID, accepting: Bool) async {

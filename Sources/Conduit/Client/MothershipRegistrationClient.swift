@@ -103,6 +103,15 @@ public actor MothershipRegistrationClient {
                     timeout: .seconds(10),
                     allowWithoutCalls: true
                 )
+                // This node is the CLIENT of the bidi session, so its large
+                // index/search/library responses travel as client→server
+                // messages. Match the mothership's opened window/frames, and
+                // gzip the throttle-prone direction (payloads are text-heavy;
+                // embeddings never cross the wire).
+                c.http2.targetWindowSize = 16 * 1024 * 1024
+                c.http2.maxFrameSize = 1 << 20
+                c.compression.algorithm = .gzip
+                c.compression.enabledAlgorithms = [.gzip, .none]
             }
         )
     }
@@ -215,6 +224,11 @@ public actor MothershipRegistrationClient {
                             for await msg in outgoing {
                                 logger.info("MothershipRegistrationClient: → Seer \(payloadName(msg.payload)) [\(msg.correlationID.prefix(8))]")
                                 try await writer.write(msg)
+                                // Outbound progress is liveness too: during a
+                                // long one-way push nothing arrives from Seer,
+                                // and the watchdog must not tear the session
+                                // down mid-transfer.
+                                pongTracker.touch()
                                 logger.info("MothershipRegistrationClient: → Seer write complete \(payloadName(msg.payload)) [\(msg.correlationID.prefix(8))]")
                             }
                         } catch {

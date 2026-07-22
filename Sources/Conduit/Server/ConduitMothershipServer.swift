@@ -51,6 +51,17 @@ public actor ConduitMothershipServer {
                         $0.connection.keepalive.timeout = .seconds(10)
                         $0.connection.keepalive.clientBehavior.allowWithoutCalls = true
                         $0.connection.keepalive.clientBehavior.minPingIntervalWithoutCalls = .seconds(10)
+                        // The big payloads (index/search/library responses, up to
+                        // the 100 MB cap above) arrive client→server on the bidi
+                        // session stream — and the server's DEFAULT receive window
+                        // is 64 KiB, capping throughput at ~window/RTT and
+                        // producing congestion-like throttling on every large
+                        // push. Open the window and fatten frames to match.
+                        $0.http2.targetWindowSize = 16 * 1024 * 1024
+                        $0.http2.maxFrameSize = 1 << 20
+                        // Session payloads are text-heavy (embeddings never cross
+                        // the wire) — accept gzip from nodes.
+                        $0.compression.enabledAlgorithms = [.gzip, .none]
                     }
                 ),
                 services: [service]

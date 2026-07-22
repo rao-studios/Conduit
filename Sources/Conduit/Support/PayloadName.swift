@@ -20,6 +20,8 @@ public func payloadName(_ payload: Totem_V1_TotemSessionMessage.OneOf_Payload?) 
     case .updateDocumentResponse:  return "updateDocumentResponse"
     case .statsRequest:            return "statsRequest"
     case .statsResponse:           return "statsResponse"
+    case .documentsRequest:        return "documentsRequest"
+    case .documentsResponse:       return "documentsResponse"
     case .none:                    return "none"
     }
 }
