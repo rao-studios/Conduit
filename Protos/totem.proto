@@ -174,6 +174,10 @@ service TotemLibrary {
   // order. Access rule matches search/graph: caller-owned or public docs
   // only; anything else is silently omitted from the response.
   rpc Documents (TotemDocumentsRequest) returns (TotemDocumentsResponse);
+  // Paged full-document export for training. Search snippets are not a
+  // corpus: this returns the same TotemDocumentContent Documents does,
+  // filtered by group and optional document-id prefix, after_id exclusive.
+  rpc ExportCorpus (TotemExportCorpusRequest) returns (TotemExportCorpusResponse);
 }
 
 message TotemDocument {
@@ -227,6 +231,19 @@ message TotemDocumentContent {
 
 message TotemDocumentsResponse {
   repeated TotemDocumentContent documents = 1;  // inaccessible/unknown ids omitted
+}
+
+message TotemExportCorpusRequest {
+  string          owner_id            = 1;
+  repeated string group_ids           = 2;  // empty = every group the owner can read
+  string          document_id_prefix  = 3;  // e.g. "mary-behavior-"; empty = any
+  string          after_id            = 4;  // exclusive cursor on sorted document id
+  int32           limit               = 5;  // 0 = no limit
+}
+
+message TotemExportCorpusResponse {
+  repeated TotemDocumentContent documents = 1;
+  bool                          has_more  = 2;
 }
 
 // ── Totem hosts this — Seer calls it for knowledge-graph proxy routes ────────

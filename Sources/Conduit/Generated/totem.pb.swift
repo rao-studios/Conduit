@@ -578,6 +578,44 @@ public nonisolated struct Totem_V1_TotemDocumentsResponse: Sendable {
   public init() {}
 }
 
+public nonisolated struct Totem_V1_TotemExportCorpusRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var ownerID: String = String()
+
+  /// empty = every group the owner can read
+  public var groupIds: [String] = []
+
+  /// e.g. "mary-behavior-"; empty = any
+  public var documentIDPrefix: String = String()
+
+  /// exclusive cursor on sorted document id
+  public var afterID: String = String()
+
+  /// 0 = no limit
+  public var limit: Int32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Totem_V1_TotemExportCorpusResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var documents: [Totem_V1_TotemDocumentContent] = []
+
+  public var hasMore_p: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// entity: exact/token entity name to match; query: free text (Totem embeds it)
 /// At least one of entity/query should be set. hops 0–3 (BFS depth from matches).
 public nonisolated struct Totem_V1_TotemGraphQueryRequest: Sendable {
@@ -2218,6 +2256,91 @@ nonisolated extension Totem_V1_TotemDocumentsResponse: SwiftProtobuf.Message, Sw
 
   public static func ==(lhs: Totem_V1_TotemDocumentsResponse, rhs: Totem_V1_TotemDocumentsResponse) -> Bool {
     if lhs.documents != rhs.documents {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Totem_V1_TotemExportCorpusRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemExportCorpusRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{3}group_ids\0\u{3}document_id_prefix\0\u{3}after_id\0\u{1}limit\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.ownerID) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.groupIds) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.documentIDPrefix) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.afterID) }()
+      case 5: try { try decoder.decodeSingularInt32Field(value: &self.limit) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.ownerID.isEmpty {
+      try visitor.visitSingularStringField(value: self.ownerID, fieldNumber: 1)
+    }
+    if !self.groupIds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.groupIds, fieldNumber: 2)
+    }
+    if !self.documentIDPrefix.isEmpty {
+      try visitor.visitSingularStringField(value: self.documentIDPrefix, fieldNumber: 3)
+    }
+    if !self.afterID.isEmpty {
+      try visitor.visitSingularStringField(value: self.afterID, fieldNumber: 4)
+    }
+    if self.limit != 0 {
+      try visitor.visitSingularInt32Field(value: self.limit, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Totem_V1_TotemExportCorpusRequest, rhs: Totem_V1_TotemExportCorpusRequest) -> Bool {
+    if lhs.ownerID != rhs.ownerID {return false}
+    if lhs.groupIds != rhs.groupIds {return false}
+    if lhs.documentIDPrefix != rhs.documentIDPrefix {return false}
+    if lhs.afterID != rhs.afterID {return false}
+    if lhs.limit != rhs.limit {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Totem_V1_TotemExportCorpusResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TotemExportCorpusResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}documents\0\u{3}has_more\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.documents) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasMore_p) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.documents.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.documents, fieldNumber: 1)
+    }
+    if self.hasMore_p != false {
+      try visitor.visitSingularBoolField(value: self.hasMore_p, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Totem_V1_TotemExportCorpusResponse, rhs: Totem_V1_TotemExportCorpusResponse) -> Bool {
+    if lhs.documents != rhs.documents {return false}
+    if lhs.hasMore_p != rhs.hasMore_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

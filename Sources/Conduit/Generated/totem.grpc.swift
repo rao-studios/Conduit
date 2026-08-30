@@ -2373,10 +2373,23 @@ public enum Totem_V1_TotemLibrary {
                 method: "Documents"
             )
         }
+        /// Namespace for "ExportCorpus" metadata.
+        public enum ExportCorpus {
+            /// Request type for "ExportCorpus".
+            public typealias Input = Totem_V1_TotemExportCorpusRequest
+            /// Response type for "ExportCorpus".
+            public typealias Output = Totem_V1_TotemExportCorpusResponse
+            /// Descriptor for "ExportCorpus".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "totem.v1.TotemLibrary"),
+                method: "ExportCorpus"
+            )
+        }
         /// Descriptors for all methods in the "totem.v1.TotemLibrary" service.
         public static let descriptors: [GRPCCore.MethodDescriptor] = [
             Library.descriptor,
-            Documents.descriptor
+            Documents.descriptor,
+            ExportCorpus.descriptor
         ]
     }
 }
@@ -2439,6 +2452,26 @@ extension Totem_V1_TotemLibrary {
             request: GRPCCore.StreamingServerRequest<Totem_V1_TotemDocumentsRequest>,
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemDocumentsResponse>
+
+        /// Handle the "ExportCorpus" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Paged full-document export for training. Search snippets are not a
+        /// > corpus: this returns the same TotemDocumentContent Documents does,
+        /// > filtered by group and optional document-id prefix, after_id exclusive.
+        ///
+        /// - Parameters:
+        ///   - request: A streaming request of `Totem_V1_TotemExportCorpusRequest` messages.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A streaming response of `Totem_V1_TotemExportCorpusResponse` messages.
+        func exportCorpus(
+            request: GRPCCore.StreamingServerRequest<Totem_V1_TotemExportCorpusRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemExportCorpusResponse>
     }
 
     /// Service protocol for the "totem.v1.TotemLibrary" service.
@@ -2486,6 +2519,26 @@ extension Totem_V1_TotemLibrary {
             request: GRPCCore.ServerRequest<Totem_V1_TotemDocumentsRequest>,
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemDocumentsResponse>
+
+        /// Handle the "ExportCorpus" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Paged full-document export for training. Search snippets are not a
+        /// > corpus: this returns the same TotemDocumentContent Documents does,
+        /// > filtered by group and optional document-id prefix, after_id exclusive.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Totem_V1_TotemExportCorpusRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A response containing a single `Totem_V1_TotemExportCorpusResponse` message.
+        func exportCorpus(
+            request: GRPCCore.ServerRequest<Totem_V1_TotemExportCorpusRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemExportCorpusResponse>
     }
 
     /// Simple service protocol for the "totem.v1.TotemLibrary" service.
@@ -2531,6 +2584,26 @@ extension Totem_V1_TotemLibrary {
             request: Totem_V1_TotemDocumentsRequest,
             context: GRPCCore.ServerContext
         ) async throws -> Totem_V1_TotemDocumentsResponse
+
+        /// Handle the "ExportCorpus" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Paged full-document export for training. Search snippets are not a
+        /// > corpus: this returns the same TotemDocumentContent Documents does,
+        /// > filtered by group and optional document-id prefix, after_id exclusive.
+        ///
+        /// - Parameters:
+        ///   - request: A `Totem_V1_TotemExportCorpusRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A `Totem_V1_TotemExportCorpusResponse` to respond with.
+        func exportCorpus(
+            request: Totem_V1_TotemExportCorpusRequest,
+            context: GRPCCore.ServerContext
+        ) async throws -> Totem_V1_TotemExportCorpusResponse
     }
 }
 
@@ -2555,6 +2628,17 @@ extension Totem_V1_TotemLibrary.StreamingServiceProtocol {
             serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemDocumentsResponse>(),
             handler: { request, context in
                 try await self.documents(
+                    request: request,
+                    context: context
+                )
+            }
+        )
+        router.registerHandler(
+            forMethod: Totem_V1_TotemLibrary.Method.ExportCorpus.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemExportCorpusRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemExportCorpusResponse>(),
+            handler: { request, context in
+                try await self.exportCorpus(
                     request: request,
                     context: context
                 )
@@ -2587,6 +2671,17 @@ extension Totem_V1_TotemLibrary.ServiceProtocol {
         )
         return GRPCCore.StreamingServerResponse(single: response)
     }
+
+    public func exportCorpus(
+        request: GRPCCore.StreamingServerRequest<Totem_V1_TotemExportCorpusRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.StreamingServerResponse<Totem_V1_TotemExportCorpusResponse> {
+        let response = try await self.exportCorpus(
+            request: GRPCCore.ServerRequest(stream: request),
+            context: context
+        )
+        return GRPCCore.StreamingServerResponse(single: response)
+    }
 }
 
 // Default implementation of methods from 'ServiceProtocol'.
@@ -2611,6 +2706,19 @@ extension Totem_V1_TotemLibrary.SimpleServiceProtocol {
     ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemDocumentsResponse> {
         return GRPCCore.ServerResponse<Totem_V1_TotemDocumentsResponse>(
             message: try await self.documents(
+                request: request.message,
+                context: context
+            ),
+            metadata: [:]
+        )
+    }
+
+    public func exportCorpus(
+        request: GRPCCore.ServerRequest<Totem_V1_TotemExportCorpusRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.ServerResponse<Totem_V1_TotemExportCorpusResponse> {
+        return GRPCCore.ServerResponse<Totem_V1_TotemExportCorpusResponse>(
+            message: try await self.exportCorpus(
                 request: request.message,
                 context: context
             ),
@@ -2674,6 +2782,31 @@ extension Totem_V1_TotemLibrary {
             deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemDocumentsResponse>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemDocumentsResponse>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "ExportCorpus" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Paged full-document export for training. Search snippets are not a
+        /// > corpus: this returns the same TotemDocumentContent Documents does,
+        /// > filtered by group and optional document-id prefix, after_id exclusive.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Totem_V1_TotemExportCorpusRequest` message.
+        ///   - serializer: A serializer for `Totem_V1_TotemExportCorpusRequest` messages.
+        ///   - deserializer: A deserializer for `Totem_V1_TotemExportCorpusResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        func exportCorpus<Result>(
+            request: GRPCCore.ClientRequest<Totem_V1_TotemExportCorpusRequest>,
+            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemExportCorpusRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemExportCorpusResponse>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemExportCorpusResponse>) async throws -> Result
         ) async throws -> Result where Result: Sendable
     }
 
@@ -2762,6 +2895,42 @@ extension Totem_V1_TotemLibrary {
                 onResponse: handleResponse
             )
         }
+
+        /// Call the "ExportCorpus" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Paged full-document export for training. Search snippets are not a
+        /// > corpus: this returns the same TotemDocumentContent Documents does,
+        /// > filtered by group and optional document-id prefix, after_id exclusive.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Totem_V1_TotemExportCorpusRequest` message.
+        ///   - serializer: A serializer for `Totem_V1_TotemExportCorpusRequest` messages.
+        ///   - deserializer: A deserializer for `Totem_V1_TotemExportCorpusResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func exportCorpus<Result>(
+            request: GRPCCore.ClientRequest<Totem_V1_TotemExportCorpusRequest>,
+            serializer: some GRPCCore.MessageSerializer<Totem_V1_TotemExportCorpusRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Totem_V1_TotemExportCorpusResponse>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemExportCorpusResponse>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Totem_V1_TotemLibrary.Method.ExportCorpus.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
     }
 }
 
@@ -2819,6 +2988,37 @@ extension Totem_V1_TotemLibrary.ClientProtocol {
             request: request,
             serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemDocumentsRequest>(),
             deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemDocumentsResponse>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "ExportCorpus" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Paged full-document export for training. Search snippets are not a
+    /// > corpus: this returns the same TotemDocumentContent Documents does,
+    /// > filtered by group and optional document-id prefix, after_id exclusive.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Totem_V1_TotemExportCorpusRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func exportCorpus<Result>(
+        request: GRPCCore.ClientRequest<Totem_V1_TotemExportCorpusRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemExportCorpusResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.exportCorpus(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Totem_V1_TotemExportCorpusRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Totem_V1_TotemExportCorpusResponse>(),
             options: options,
             onResponse: handleResponse
         )
@@ -2886,6 +3086,41 @@ extension Totem_V1_TotemLibrary.ClientProtocol {
             metadata: metadata
         )
         return try await self.documents(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "ExportCorpus" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Paged full-document export for training. Search snippets are not a
+    /// > corpus: this returns the same TotemDocumentContent Documents does,
+    /// > filtered by group and optional document-id prefix, after_id exclusive.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func exportCorpus<Result>(
+        _ message: Totem_V1_TotemExportCorpusRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Totem_V1_TotemExportCorpusResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Totem_V1_TotemExportCorpusRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.exportCorpus(
             request: request,
             options: options,
             onResponse: handleResponse

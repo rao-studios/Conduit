@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerates Sources/Conduit/Generated from Protos/totem.proto.
+# Regenerates Sources/Conduit/Generated from Protos/*.proto.
 #
 # The gRPC plugin is built from the package's resolved grpc-swift-protobuf
 # checkout so the generated code always matches the runtime the package links
@@ -24,5 +24,5 @@ protoc --proto_path=Protos \
   --grpc-swift_out="$OUT" \
   --grpc-swift_opt=Visibility=Public \
   --grpc-swift_opt=Server=true --grpc-swift_opt=Client=true \
-  Protos/totem.proto
+  Protos/totem.proto Protos/fleet.proto
 echo "Generated $(ls "$OUT")"
