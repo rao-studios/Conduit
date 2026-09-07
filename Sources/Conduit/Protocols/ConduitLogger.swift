@@ -1,7 +1,7 @@
 import Logging
 
 /// Logging seam for Conduit's session/client machinery. Consumers route these
-/// through their own logging stacks (e.g. Seer's structured Cockpit logger);
+/// through their own logging stacks (e.g. Sewn's structured Cockpit logger);
 /// the optional label carries the event name some backends key on.
 public protocol ConduitLogger: Sendable {
     func debug(_ label: String?, _ message: String)

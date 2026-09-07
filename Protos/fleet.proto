@@ -3,7 +3,7 @@ syntax = "proto3";
 package fleet.v1;
 
 // Fleet hosts this — Mary dials it for named LoRA slots (one per
-// totem_id × ability_id). Training still content-addresses the input
+// thread_id × ability_id). Training still content-addresses the input
 // set; the slot path is the user-facing identity and overwrites in place.
 
 service FleetLoRA {
@@ -16,7 +16,7 @@ service FleetLoRA {
 }
 
 message ListAdaptersRequest {
-  string totem_id = 1;
+  string thread_id = 1;
 }
 
 message ListAdaptersResponse {
@@ -24,7 +24,7 @@ message ListAdaptersResponse {
 }
 
 message AdapterStatusRequest {
-  string totem_id   = 1;
+  string thread_id   = 1;
   string ability_id = 2;
 }
 
@@ -47,11 +47,11 @@ message TrainingPair {
 }
 
 message TrainRequest {
-  string totem_id            = 1;
+  string thread_id            = 1;
   string ability_id          = 2;
   string model_id            = 3;
   repeated TrainingPair pairs = 4;
-  // Used when pairs is empty: Fleet pulls ExportCorpus from the local Totem.
+  // Used when pairs is empty: Fleet pulls ExportCorpus from the local Thread.
   string          owner_id           = 5;
   repeated string group_ids          = 6;
   string          document_id_prefix = 7;
@@ -66,7 +66,7 @@ message TrainProgress {
 }
 
 message CompleteRequest {
-  string totem_id   = 1;
+  string thread_id   = 1;
   string ability_id = 2;
   // Optional pin: when set and it differs from the slot's current cid the
   // call is refused with the live cid, so a client refreshes its slots.

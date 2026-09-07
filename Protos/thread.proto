@@ -1,22 +1,22 @@
 syntax = "proto3";
 
-package totem.v1;
+package thread.v1;
 
-// ── Seer hosts this — Totems call it to join the network ────────────────────
-service TotemRegistration {
+// ── Sewn hosts this — Threads call it to join the network ────────────────────
+service ThreadRegistration {
   rpc Register            (RegisterRequest)            returns (RegisterResponse);
   rpc Heartbeat           (HeartbeatRequest)           returns (HeartbeatResponse);
   rpc UpdateAvailability  (AvailabilityUpdateRequest)  returns (AvailabilityUpdateResponse);
-  // Bidirectional session: Totem holds the connection, Seer sends requests over it.
-  // Totem opens this after Register succeeds and keeps it alive with Ping messages.
-  rpc Session (stream TotemSessionMessage) returns (stream TotemSessionMessage);
+  // Bidirectional session: Thread holds the connection, Sewn sends requests over it.
+  // Thread opens this after Register succeeds and keeps it alive with Ping messages.
+  rpc Session (stream ThreadSessionMessage) returns (stream ThreadSessionMessage);
 }
 
 message RegisterRequest {
-  string totem_id  = 1;
+  string thread_id  = 1;
   string host      = 2;
   int32  grpc_port = 3;
-  int32  http_port = 4;   // Totem's HTTP/REST port (for proxy forwarding)
+  int32  http_port = 4;   // Thread's HTTP/REST port (for proxy forwarding)
 }
 
 message RegisterResponse {
@@ -24,11 +24,11 @@ message RegisterResponse {
   string mothership_id = 2;
 }
 
-message HeartbeatRequest  { string totem_id = 1; }
+message HeartbeatRequest  { string thread_id = 1; }
 message HeartbeatResponse { bool   alive    = 1; }
 
 message AvailabilityUpdateRequest {
-  string totem_id          = 1;
+  string thread_id          = 1;
   bool   accepting_storage = 2;
 }
 
@@ -36,21 +36,21 @@ message AvailabilityUpdateResponse {
   bool acknowledged = 1;
 }
 
-// ── Totem hosts this — Seer calls it for search/index/remove fan-out ────────
-service TotemQuery {
-  rpc Search (TotemSearchRequest) returns (TotemSearchResponse);
-  rpc Index  (TotemIndexRequest)  returns (TotemIndexResponse);
-  rpc Remove (TotemRemoveRequest) returns (TotemRemoveResponse);
+// ── Thread hosts this — Sewn calls it for search/index/remove fan-out ────────
+service ThreadQuery {
+  rpc Search (ThreadSearchRequest) returns (ThreadSearchResponse);
+  rpc Index  (ThreadIndexRequest)  returns (ThreadIndexResponse);
+  rpc Remove (ThreadRemoveRequest) returns (ThreadRemoveResponse);
 }
 
-// ── Totem hosts this — Seer calls it to update groups/documents + fetch stats
-service TotemUpdate {
-  rpc UpdateGroup    (TotemUpdateGroupRequest)    returns (TotemUpdateGroupResponse);
-  rpc UpdateDocument (TotemUpdateDocumentRequest) returns (TotemUpdateDocumentResponse);
-  rpc Stats          (TotemStatsRequest)          returns (TotemStatsResponse);
+// ── Thread hosts this — Sewn calls it to update groups/documents + fetch stats
+service ThreadUpdate {
+  rpc UpdateGroup    (ThreadUpdateGroupRequest)    returns (ThreadUpdateGroupResponse);
+  rpc UpdateDocument (ThreadUpdateDocumentRequest) returns (ThreadUpdateDocumentResponse);
+  rpc Stats          (ThreadStatsRequest)          returns (ThreadStatsResponse);
 }
 
-message TotemSearchRequest {
+message ThreadSearchRequest {
   repeated float  query_embedding        = 1;
   repeated float  query_entity_embedding = 2;  // was query_tag_embedding (same wire format)
   string          owner_id               = 3;
@@ -58,25 +58,25 @@ message TotemSearchRequest {
   int32           top_k                  = 5;
   repeated string group_ids              = 6;
   bool            aggregate              = 7;
-  string          query_text             = 8;  // raw query; Totem embeds if query_embedding is empty
+  string          query_text             = 8;  // raw query; Thread embeds if query_embedding is empty
   repeated string entities               = 9;  // query entity terms for graph matching
 }
 
-message TotemSearchResponse {
-  repeated TotemPartitionResult results = 1;
-  TotemGraphTrace               trace   = 2;  // how the knowledge graph shaped this search
+message ThreadSearchResponse {
+  repeated ThreadPartitionResult results = 1;
+  ThreadGraphTrace               trace   = 2;  // how the knowledge graph shaped this search
 }
 
 // Graph provenance for a hybrid search: which entities matched the query and
 // which edges pulled in extra documents during one-hop expansion.
-message TotemGraphTrace {
+message ThreadGraphTrace {
   repeated string matched_entity_ids      = 1;
   repeated string expansion_edge_ids      = 2;
   int32           expanded_document_count = 3;
 }
 
-message TotemPartitionResult {
-  string totem_id      = 1;
+message ThreadPartitionResult {
+  string thread_id      = 1;
   string partition_id  = 2;
   string document_id   = 3;
   string owner_id      = 4;
@@ -85,53 +85,53 @@ message TotemPartitionResult {
   int32  shard_index   = 7 [deprecated = true];  // always 0; shards retired with HNSW
 }
 
-message TotemIndexRequest {
+message ThreadIndexRequest {
   string                owner_id    = 1;
   string                group_id    = 2;
   string                group_label = 3;
   string                scope       = 4;
-  repeated TotemIndexItem items     = 5;
+  repeated ThreadIndexItem items     = 5;
 }
 
-message TotemIndexItem {
+message ThreadIndexItem {
   string          document_id = 1;
   repeated string texts       = 2;
   repeated string tags        = 3;  // legacy: treated as concept entities when entities is empty
   string          name        = 4;
   bytes           metadata    = 5;
   string          media_type  = 6;
-  repeated TotemGraphEntityIn   entities      = 7;  // caller-provided graph payload (optional;
-  repeated TotemGraphRelationIn relationships = 8;  // Totem extracts when both are empty)
+  repeated ThreadGraphEntityIn   entities      = 7;  // caller-provided graph payload (optional;
+  repeated ThreadGraphRelationIn relationships = 8;  // Thread extracts when both are empty)
 }
 
-message TotemGraphEntityIn {
+message ThreadGraphEntityIn {
   string name = 1;
   string kind = 2;  // person|organization|place|event|work|concept|other; "" = concept
 }
 
-message TotemGraphRelationIn {
+message ThreadGraphRelationIn {
   string subject   = 1;
   string predicate = 2;
   string object    = 3;
 }
 
-message TotemIndexResponse {
+message ThreadIndexResponse {
   bool            success       = 1;
   int32           indexed_count = 2;
   repeated string full_cids     = 3;
 }
 
-message TotemRemoveRequest {
+message ThreadRemoveRequest {
   string          owner_id     = 1;
   repeated string document_ids = 2;
 }
 
-message TotemRemoveResponse {
+message ThreadRemoveResponse {
   bool  success       = 1;
   int32 removed_count = 2;
 }
 
-message TotemUpdateGroupRequest {
+message ThreadUpdateGroupRequest {
   string owner_id          = 1;
   string group_id          = 2;
   string access            = 3;  // "available" | "restricted" | "" (no change)
@@ -141,46 +141,46 @@ message TotemUpdateGroupRequest {
   bool update_metadata     = 7;  // when true, replaces description + tags
 }
 
-message TotemUpdateGroupResponse {
+message ThreadUpdateGroupResponse {
   bool   success  = 1;
   string group_id = 2;
 }
 
-message TotemUpdateDocumentRequest {
+message ThreadUpdateDocumentRequest {
   string owner_id    = 1;
   string document_id = 2;
   string access      = 3;   // "available" | "restricted" | "" (no change)
   string group_id    = 4;   // move to this group; "" = no change
 }
 
-message TotemUpdateDocumentResponse {
+message ThreadUpdateDocumentResponse {
   bool   success     = 1;
   string document_id = 2;
 }
 
-message TotemStatsRequest {}
+message ThreadStatsRequest {}
 
-message TotemStatsResponse {
+message ThreadStatsResponse {
   int64 document_count          = 1;
   int64 group_count             = 2;
   int64 owner_count             = 3;
   int64 available_document_count = 4;
 }
 
-// ── Totem hosts this — Seer calls it for library fan-out ─────────────────────
-service TotemLibrary {
-  rpc Library (TotemLibraryRequest) returns (TotemLibraryResponse);
+// ── Thread hosts this — Sewn calls it for library fan-out ─────────────────────
+service ThreadLibrary {
+  rpc Library (ThreadLibraryRequest) returns (ThreadLibraryResponse);
   // Full document content by id — the partition texts reassembled in stored
   // order. Access rule matches search/graph: caller-owned or public docs
   // only; anything else is silently omitted from the response.
-  rpc Documents (TotemDocumentsRequest) returns (TotemDocumentsResponse);
+  rpc Documents (ThreadDocumentsRequest) returns (ThreadDocumentsResponse);
   // Paged full-document export for training. Search snippets are not a
-  // corpus: this returns the same TotemDocumentContent Documents does,
+  // corpus: this returns the same ThreadDocumentContent Documents does,
   // filtered by group and optional document-id prefix, after_id exclusive.
-  rpc ExportCorpus (TotemExportCorpusRequest) returns (TotemExportCorpusResponse);
+  rpc ExportCorpus (ThreadExportCorpusRequest) returns (ThreadExportCorpusResponse);
 }
 
-message TotemDocument {
+message ThreadDocument {
   string id         = 1;
   string url        = 2;
   string owner_id   = 3;
@@ -188,37 +188,37 @@ message TotemDocument {
   int64  created_at = 5;
 }
 
-message TotemGroup {
+message ThreadGroup {
   string                 id              = 1;
   string                 label           = 2;
   string                 owner_id        = 3;
-  repeated TotemDocument documents       = 4;
+  repeated ThreadDocument documents       = 4;
   string                 access          = 5;
   double                 total_earnings  = 6;
   string                 group_description = 7;
   repeated string        tags            = 8;
 }
 
-message TotemLibraryRequest {
+message ThreadLibraryRequest {
   string owner_id          = 1;
   bool   include_available = 2;
   int32  limit             = 3;  // 0 = no limit (return all)
   string after_id          = 4;  // cursor: return groups with id > after_id (sorted); empty = start
-  string totem_id          = 5;  // UUID of this Totem node; set by Seer for logging/validation
+  string thread_id          = 5;  // UUID of this Thread node; set by Sewn for logging/validation
   repeated string document_ids = 6;  // when non-empty, filter to groups containing these docs
 }
 
-message TotemLibraryResponse {
-  repeated TotemGroup groups   = 1;
+message ThreadLibraryResponse {
+  repeated ThreadGroup groups   = 1;
   bool                has_more = 2;  // true if more pages follow
 }
 
-message TotemDocumentsRequest {
+message ThreadDocumentsRequest {
   string          owner_id     = 1;
   repeated string document_ids = 2;
 }
 
-message TotemDocumentContent {
+message ThreadDocumentContent {
   string          id          = 1;
   string          name        = 2;
   string          owner_id    = 3;
@@ -229,11 +229,11 @@ message TotemDocumentContent {
   string          media_type  = 8;
 }
 
-message TotemDocumentsResponse {
-  repeated TotemDocumentContent documents = 1;  // inaccessible/unknown ids omitted
+message ThreadDocumentsResponse {
+  repeated ThreadDocumentContent documents = 1;  // inaccessible/unknown ids omitted
 }
 
-message TotemExportCorpusRequest {
+message ThreadExportCorpusRequest {
   string          owner_id            = 1;
   repeated string group_ids           = 2;  // empty = every group the owner can read
   string          document_id_prefix  = 3;  // e.g. "mary-behavior-"; empty = any
@@ -241,19 +241,19 @@ message TotemExportCorpusRequest {
   int32           limit               = 5;  // 0 = no limit
 }
 
-message TotemExportCorpusResponse {
-  repeated TotemDocumentContent documents = 1;
+message ThreadExportCorpusResponse {
+  repeated ThreadDocumentContent documents = 1;
   bool                          has_more  = 2;
 }
 
-// ── Totem hosts this — Seer calls it for knowledge-graph proxy routes ────────
-service TotemGraph {
-  rpc Query (TotemGraphQueryRequest) returns (TotemGraphQueryResponse);
+// ── Thread hosts this — Sewn calls it for knowledge-graph proxy routes ────────
+service ThreadGraph {
+  rpc Query (ThreadGraphQueryRequest) returns (ThreadGraphQueryResponse);
 }
 
-// entity: exact/token entity name to match; query: free text (Totem embeds it)
+// entity: exact/token entity name to match; query: free text (Thread embeds it)
 // At least one of entity/query should be set. hops 0–3 (BFS depth from matches).
-message TotemGraphQueryRequest {
+message ThreadGraphQueryRequest {
   string          owner_id          = 1;
   string          entity            = 2;
   string          query             = 3;
@@ -263,7 +263,7 @@ message TotemGraphQueryRequest {
   bool            include_documents = 7;
 }
 
-message TotemGraphEntity {
+message ThreadGraphEntity {
   string          id            = 1;
   string          name          = 2;
   string          kind          = 3;
@@ -272,7 +272,7 @@ message TotemGraphEntity {
   repeated string document_ids  = 6;
 }
 
-message TotemGraphRelationship {
+message ThreadGraphRelationship {
   string          id           = 1;
   string          subject_id   = 2;
   string          predicate    = 3;
@@ -281,33 +281,33 @@ message TotemGraphRelationship {
   repeated string document_ids = 6;
 }
 
-message TotemGraphDocument {
+message ThreadGraphDocument {
   string id       = 1;
   string name     = 2;
   string owner_id = 3;
 }
 
-message TotemGraphStats {
+message ThreadGraphStats {
   int64 entity_count       = 1;
   int64 relationship_count = 2;
 }
 
-message TotemGraphQueryResponse {
-  repeated TotemGraphEntity       entities      = 1;
-  repeated TotemGraphRelationship relationships = 2;
-  repeated TotemGraphDocument     documents     = 3;
-  TotemGraphStats                 stats         = 4;
+message ThreadGraphQueryResponse {
+  repeated ThreadGraphEntity       entities      = 1;
+  repeated ThreadGraphRelationship relationships = 2;
+  repeated ThreadGraphDocument     documents     = 3;
+  ThreadGraphStats                 stats         = 4;
 }
 
 // ── Session envelope — used by the bidirectional Session RPC ─────────────────
-// Totem sends pings and response payloads; Seer sends request payloads.
+// Thread sends pings and response payloads; Sewn sends request payloads.
 // correlation_id ties each request to its response.
-// totem_id is set by Totem on every Ping so Seer can identify the stream.
-message TotemSessionMessage {
+// thread_id is set by Thread on every Ping so Sewn can identify the stream.
+message ThreadSessionMessage {
   string correlation_id = 1;
-  string totem_id       = 2;
+  string thread_id       = 2;
 
-  // 13–22 were the TotemHNSW request/response arms, retired with the HNSW engine.
+  // 13–22 were the ThreadHNSW request/response arms, retired with the HNSW engine.
   reserved 13 to 22;
   reserved "hnsw_stats_request", "hnsw_stats_response",
            "hnsw_graph_request", "hnsw_graph_response",
@@ -316,28 +316,28 @@ message TotemSessionMessage {
            "hnsw_delete_node_request", "hnsw_delete_node_response";
 
   oneof payload {
-    TotemSessionPing             ping                      = 3;
-    TotemSessionPong             pong                      = 4;
-    TotemSearchRequest           search_request            = 5;
-    TotemSearchResponse          search_response           = 6;
-    TotemIndexRequest            index_request             = 7;
-    TotemIndexResponse           index_response            = 8;
-    TotemRemoveRequest           remove_request            = 9;
-    TotemRemoveResponse          remove_response           = 10;
-    TotemLibraryRequest          library_request           = 11;
-    TotemLibraryResponse         library_response          = 12;
-    TotemUpdateGroupRequest      update_group_request      = 23;
-    TotemUpdateGroupResponse     update_group_response     = 24;
-    TotemUpdateDocumentRequest   update_document_request   = 25;
-    TotemUpdateDocumentResponse  update_document_response  = 26;
-    TotemStatsRequest            stats_request             = 27;
-    TotemStatsResponse           stats_response            = 28;
-    TotemGraphQueryRequest       graph_request             = 29;
-    TotemGraphQueryResponse      graph_response            = 30;
-    TotemDocumentsRequest        documents_request         = 31;
-    TotemDocumentsResponse       documents_response        = 32;
+    ThreadSessionPing             ping                      = 3;
+    ThreadSessionPong             pong                      = 4;
+    ThreadSearchRequest           search_request            = 5;
+    ThreadSearchResponse          search_response           = 6;
+    ThreadIndexRequest            index_request             = 7;
+    ThreadIndexResponse           index_response            = 8;
+    ThreadRemoveRequest           remove_request            = 9;
+    ThreadRemoveResponse          remove_response           = 10;
+    ThreadLibraryRequest          library_request           = 11;
+    ThreadLibraryResponse         library_response          = 12;
+    ThreadUpdateGroupRequest      update_group_request      = 23;
+    ThreadUpdateGroupResponse     update_group_response     = 24;
+    ThreadUpdateDocumentRequest   update_document_request   = 25;
+    ThreadUpdateDocumentResponse  update_document_response  = 26;
+    ThreadStatsRequest            stats_request             = 27;
+    ThreadStatsResponse           stats_response            = 28;
+    ThreadGraphQueryRequest       graph_request             = 29;
+    ThreadGraphQueryResponse      graph_response            = 30;
+    ThreadDocumentsRequest        documents_request         = 31;
+    ThreadDocumentsResponse       documents_response        = 32;
   }
 }
 
-message TotemSessionPing {}
-message TotemSessionPong {}
+message ThreadSessionPing {}
+message ThreadSessionPong {}

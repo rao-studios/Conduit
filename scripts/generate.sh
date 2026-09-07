@@ -24,5 +24,5 @@ protoc --proto_path=Protos \
   --grpc-swift_out="$OUT" \
   --grpc-swift_opt=Visibility=Public \
   --grpc-swift_opt=Server=true --grpc-swift_opt=Client=true \
-  Protos/totem.proto Protos/fleet.proto
+  Protos/thread.proto Protos/fleet.proto
 echo "Generated $(ls "$OUT")"

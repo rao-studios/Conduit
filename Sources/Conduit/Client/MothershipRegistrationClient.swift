@@ -21,10 +21,10 @@ final class PongTracker: @unchecked Sendable {
 public actor MothershipRegistrationClient {
     public let mothershipHost: String
     public let mothershipGRPCPort: Int
-    public let totemId: UUID
-    public let totemHost: String
-    public let totemGRPCPort: Int
-    public let totemHTTPPort: Int
+    public let threadId: UUID
+    public let threadHost: String
+    public let threadGRPCPort: Int
+    public let threadHTTPPort: Int
     public let requestDispatcher: any SessionRequestHandling
     private let logger: any ConduitLogger
     private var sessionTask: Task<Void, Never>?
@@ -33,19 +33,19 @@ public actor MothershipRegistrationClient {
     public init(
         mothershipHost: String,
         mothershipGRPCPort: Int,
-        totemId: UUID,
-        totemHost: String,
-        totemGRPCPort: Int,
-        totemHTTPPort: Int,
+        threadId: UUID,
+        threadHost: String,
+        threadGRPCPort: Int,
+        threadHTTPPort: Int,
         requestDispatcher: any SessionRequestHandling,
         logger: any ConduitLogger
     ) {
         self.mothershipHost      = mothershipHost
         self.mothershipGRPCPort  = mothershipGRPCPort
-        self.totemId             = totemId
-        self.totemHost           = totemHost
-        self.totemGRPCPort       = totemGRPCPort
-        self.totemHTTPPort       = totemHTTPPort
+        self.threadId             = threadId
+        self.threadHost           = threadHost
+        self.threadGRPCPort       = threadGRPCPort
+        self.threadHTTPPort       = threadHTTPPort
         self.requestDispatcher   = requestDispatcher
         self.logger              = logger
     }
@@ -53,7 +53,7 @@ public actor MothershipRegistrationClient {
     // MARK: - Lifecycle
 
     /// Starts the registration + session stream loop. Reconnects automatically on
-    /// connection loss. Call once at startup; registration retries until Seer is reachable.
+    /// connection loss. Call once at startup; registration retries until Sewn is reachable.
     public func startHeartbeatLoop() {
         sessionTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -66,8 +66,8 @@ public actor MothershipRegistrationClient {
         // Out-of-band liveness: a unary Heartbeat on its own short-lived
         // connection, independent of the session stream. A large inbound push
         // can saturate the session stream and stall the in-stream ping behind
-        // ≤100 MB index responses; this keeps Seer's `lastSeen` fresh regardless
-        // so the Totem isn't evicted mid-push.
+        // ≤100 MB index responses; this keeps Sewn's `lastSeen` fresh regardless
+        // so the Thread isn't evicted mid-push.
         heartbeatTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 15_000_000_000)
@@ -123,9 +123,9 @@ public actor MothershipRegistrationClient {
     private func sendUnaryHeartbeat() async {
         do {
             try await withGRPCClient(transport: makeTransport()) { [self] client in
-                let stub = Totem_V1_TotemRegistration.Client(wrapping: client)
-                var req = Totem_V1_HeartbeatRequest()
-                req.totemID = totemId.uuidString
+                let stub = Thread_V1_ThreadRegistration.Client(wrapping: client)
+                var req = Thread_V1_HeartbeatRequest()
+                req.threadID = threadId.uuidString
                 var options = GRPCCore.CallOptions.defaults
                 options.timeout = .seconds(10)
                 _ = try await stub.heartbeat(req, options: options)
@@ -140,9 +140,9 @@ public actor MothershipRegistrationClient {
     public func sendAvailabilityUpdate(acceptingStorage: Bool) async {
         do {
             try await withGRPCClient(transport: makeTransport()) { client in
-                let stub = Totem_V1_TotemRegistration.Client(wrapping: client)
-                var req = Totem_V1_AvailabilityUpdateRequest()
-                req.totemID = self.totemId.uuidString
+                let stub = Thread_V1_ThreadRegistration.Client(wrapping: client)
+                var req = Thread_V1_AvailabilityUpdateRequest()
+                req.threadID = self.threadId.uuidString
                 req.acceptingStorage = acceptingStorage
                 _ = try await stub.updateAvailability(req)
                 self.logger.info("MothershipRegistrationClient: availability updated — accepting_storage=\(acceptingStorage)")
@@ -155,12 +155,12 @@ public actor MothershipRegistrationClient {
     // MARK: - Session loop
 
     /// Opens one persistent gRPC connection, registers, then opens the bidirectional
-    /// session stream. Seer sends fan-out requests down the stream; this Totem dispatches
+    /// session stream. Sewn sends fan-out requests down the stream; this Thread dispatches
     /// them locally and sends responses back. Reconnects automatically on failure.
     private func runSession() async {
         do {
             try await withGRPCClient(transport: makeTransport()) { [self] client in
-                let stub = Totem_V1_TotemRegistration.Client(wrapping: client)
+                let stub = Thread_V1_ThreadRegistration.Client(wrapping: client)
 
                 // ── 1. Register (one attempt per fresh connection) ───────────
                 // `waitForReady` lets this attempt ride out transient connection
@@ -169,27 +169,27 @@ public actor MothershipRegistrationClient {
                 // fails, the error propagates out of `withGRPCClient`, tearing this
                 // connection down so the outer loop reconnects with a *fresh*
                 // client. Previously the register retry reused the same client, so a
-                // Totem started before its mothership never connected until restarted.
+                // Thread started before its mothership never connected until restarted.
                 guard !Task.isCancelled else { return }
                 var registerOptions = GRPCCore.CallOptions.defaults
                 registerOptions.waitForReady = true
                 registerOptions.timeout = .seconds(60)
 
-                var req = Totem_V1_RegisterRequest()
-                req.totemID  = totemId.uuidString
-                req.host     = totemHost
-                req.grpcPort = Int32(totemGRPCPort)
-                req.httpPort = Int32(totemHTTPPort)
+                var req = Thread_V1_RegisterRequest()
+                req.threadID  = threadId.uuidString
+                req.host     = threadHost
+                req.grpcPort = Int32(threadGRPCPort)
+                req.httpPort = Int32(threadHTTPPort)
                 let resp = try await stub.register(req, options: registerOptions)
                 guard resp.accepted else {
-                    logger.error("MothershipRegistrationClient: registration rejected (invalid totem ID?)")
+                    logger.error("MothershipRegistrationClient: registration rejected (invalid thread ID?)")
                     return
                 }
                 logger.info("MothershipRegistrationClient: registered with mothership \(resp.mothershipID)")
 
                 // ── 2. Bidirectional session stream ──────────────────────────
-                let (outgoing, continuation) = AsyncStream.makeStream(of: Totem_V1_TotemSessionMessage.self)
-                let myTotemId  = totemId
+                let (outgoing, continuation) = AsyncStream.makeStream(of: Thread_V1_ThreadSessionMessage.self)
+                let myThreadId  = threadId
                 let dispatcher = requestDispatcher
 
                 // Refreshed on every inbound message (a busy push is itself proof
@@ -206,30 +206,30 @@ public actor MothershipRegistrationClient {
                 // dead connection; this catches the case where the connection is
                 // healthy but the session is application-wedged — if no message
                 // arrives for `stalenessSeconds`, tear it down so the outer loop
-                // reconnects. Kept < 60 s to stay inside Seer's active-node window.
+                // reconnects. Kept < 60 s to stay inside Sewn's active-node window.
                 let stalenessSeconds: TimeInterval = 45
                 try await withThrowingTaskGroup(of: Void.self) { group in
                   group.addTask { [self] in
                     try await stub.session(
                     options: sessionOptions,
                     requestProducer: { [self] writer in
-                        var ping = Totem_V1_TotemSessionMessage()
-                        ping.totemID = myTotemId.uuidString
-                        ping.payload = .ping(Totem_V1_TotemSessionPing())
+                        var ping = Thread_V1_ThreadSessionMessage()
+                        ping.threadID = myThreadId.uuidString
+                        ping.payload = .ping(Thread_V1_ThreadSessionPing())
                         logger.info("MothershipRegistrationClient: session stream opened — sending initial ping")
                         try await writer.write(ping)
                         logger.info("MothershipRegistrationClient: initial ping sent — stream active")
 
                         do {
                             for await msg in outgoing {
-                                logger.info("MothershipRegistrationClient: → Seer \(payloadName(msg.payload)) [\(msg.correlationID.prefix(8))]")
+                                logger.info("MothershipRegistrationClient: → Sewn \(payloadName(msg.payload)) [\(msg.correlationID.prefix(8))]")
                                 try await writer.write(msg)
                                 // Outbound progress is liveness too: during a
-                                // long one-way push nothing arrives from Seer,
+                                // long one-way push nothing arrives from Sewn,
                                 // and the watchdog must not tear the session
                                 // down mid-transfer.
                                 pongTracker.touch()
-                                logger.info("MothershipRegistrationClient: → Seer write complete \(payloadName(msg.payload)) [\(msg.correlationID.prefix(8))]")
+                                logger.info("MothershipRegistrationClient: → Sewn write complete \(payloadName(msg.payload)) [\(msg.correlationID.prefix(8))]")
                             }
                         } catch {
                             logger.warning("MothershipRegistrationClient: requestProducer write error — \(error)")
@@ -244,9 +244,9 @@ public actor MothershipRegistrationClient {
                             while !Task.isCancelled {
                                 try? await Task.sleep(nanoseconds: 30_000_000_000)
                                 guard !Task.isCancelled else { break }
-                                var ping = Totem_V1_TotemSessionMessage()
-                                ping.totemID = myTotemId.uuidString
-                                ping.payload = .ping(Totem_V1_TotemSessionPing())
+                                var ping = Thread_V1_ThreadSessionMessage()
+                                ping.threadID = myThreadId.uuidString
+                                ping.payload = .ping(Thread_V1_ThreadSessionPing())
                                 continuation.yield(ping)
                             }
                             logger.info("MothershipRegistrationClient: pingTask ended")
@@ -268,7 +268,7 @@ public actor MothershipRegistrationClient {
                                     logger.warning("MothershipRegistrationClient: ← message with no payload [\(msg.correlationID.prefix(8))]")
                                 default:
                                     let pname = payloadName(msg.payload)
-                                    logger.info("MothershipRegistrationClient: ← Seer request \(pname) [\(msg.correlationID.prefix(8))] — dispatching")
+                                    logger.info("MothershipRegistrationClient: ← Sewn request \(pname) [\(msg.correlationID.prefix(8))] — dispatching")
                                     Task {
                                         if let resp = await dispatcher.handle(msg) {
                                             logger.info("MothershipRegistrationClient: dispatch complete \(pname) [\(msg.correlationID.prefix(8))] — queuing response")
@@ -279,7 +279,7 @@ public actor MothershipRegistrationClient {
                                     }
                                 }
                             }
-                            logger.info("MothershipRegistrationClient: response stream ended cleanly (Seer closed its send side)")
+                            logger.info("MothershipRegistrationClient: response stream ended cleanly (Sewn closed its send side)")
                         } catch {
                             logger.warning("MothershipRegistrationClient: response stream error — \(error)")
                             throw error
@@ -299,7 +299,7 @@ public actor MothershipRegistrationClient {
                               return  // cancelled — session ended normally
                           }
                           if Date().timeIntervalSince(pongTracker.value) > stalenessSeconds {
-                              logger.warning("MothershipRegistrationClient: no message from Seer in \(Int(stalenessSeconds))s — tearing down session to force reconnect")
+                              logger.warning("MothershipRegistrationClient: no message from Sewn in \(Int(stalenessSeconds))s — tearing down session to force reconnect")
                               throw SessionStalledError()
                           }
                       }

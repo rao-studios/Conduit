@@ -1,77 +1,77 @@
 # Conduit
 
-Conduit is the shared gRPC contract and transport layer for the **Seer ⇄ Totem**
+Conduit is the shared gRPC contract and transport layer for the **Sewn ⇄ Thread**
 network. It holds one canonical `.proto` file, the Swift types generated from it,
 and the session/client/server infrastructure that both sides link against so they
 speak the exact same wire format from the exact same source.
 
 Two services depend on this package:
 
-- **Seer** — the *mothership*. A central coordinator that fans search, index,
+- **Sewn** — the *mothership*. A central coordinator that fans search, index,
   library, stats and HNSW requests out across the network.
-- **Totem** — a *node*. Stores and serves a slice of the data and answers the
-  fan-out requests Seer sends it.
+- **Thread** — a *node*. Stores and serves a slice of the data and answers the
+  fan-out requests Sewn sends it.
 
-Conduit is a library only; it ships no executable. Seer and Totem each add it as
+Conduit is a library only; it ships no executable. Sewn and Thread each add it as
 a SwiftPM dependency and implement the seams (protocols) it defines.
 
 ## The connection model
 
-The non-obvious part of the design is **who dials whom**. Totems are not assumed
-to be publicly reachable, so Seer never connects to a Totem directly. Instead:
+The non-obvious part of the design is **who dials whom**. Threads are not assumed
+to be publicly reachable, so Sewn never connects to a Thread directly. Instead:
 
-1. The Totem dials Seer and calls `Register`.
-2. The Totem opens the bidirectional `Session` stream and holds it open,
+1. The Thread dials Sewn and calls `Register`.
+2. The Thread opens the bidirectional `Session` stream and holds it open,
    keeping it alive with periodic pings.
-3. Seer pushes fan-out **requests** *down* that already-open stream; the Totem
+3. Sewn pushes fan-out **requests** *down* that already-open stream; the Thread
    dispatches them locally and writes **responses** back *up* the same stream.
 
-So the TCP connection always flows Totem → Seer, but the request/response logic
-flows Seer → Totem. Every message is tagged with a `correlation_id` that ties a
+So the TCP connection always flows Thread → Sewn, but the request/response logic
+flows Sewn → Thread. Every message is tagged with a `correlation_id` that ties a
 response back to its request, which is what lets many in-flight requests share
 one stream.
 
 ```
-        Register / Heartbeat / UpdateAvailability   (unary, Totem → Seer)
-Totem  ───────────────────────────────────────────►  Seer
-        Session stream (Totem dials, stays open)
-       ◄──────────────  requests  ◄─────────────────  (Seer → Totem, over the stream)
-        ─────────────►  responses ─────────────────►  (Totem → Seer, over the stream)
+        Register / Heartbeat / UpdateAvailability   (unary, Thread → Sewn)
+Thread  ───────────────────────────────────────────►  Sewn
+        Session stream (Thread dials, stays open)
+       ◄──────────────  requests  ◄─────────────────  (Sewn → Thread, over the stream)
+        ─────────────►  responses ─────────────────►  (Thread → Sewn, over the stream)
 ```
 
-## The proto — `Protos/totem.proto`
+## The proto — `Protos/thread.proto`
 
-`package totem.v1`. One file defines every service and message. Services are
+`package thread.v1`. One file defines every service and message. Services are
 grouped by **who hosts them**:
 
 | Service | Hosted by | Purpose |
 | --- | --- | --- |
-| `TotemRegistration` | Seer | Totems call `Register`, `Heartbeat`, `UpdateAvailability`, and open the bidirectional `Session` stream. |
-| `TotemQuery` | Totem (logically) | `Search`, `Index`, `Remove`. |
-| `TotemUpdate` | Totem (logically) | `UpdateGroup`, `UpdateDocument`, `Stats`. |
-| `TotemLibrary` | Totem (logically) | `Library` fan-out. |
-| `TotemHNSW` | Totem (logically) | HNSW graph proxy: `Stats`, `Graph`, `NodeBatch`, `Node`, `DeleteNode`. |
+| `ThreadRegistration` | Sewn | Threads call `Register`, `Heartbeat`, `UpdateAvailability`, and open the bidirectional `Session` stream. |
+| `ThreadQuery` | Thread (logically) | `Search`, `Index`, `Remove`. |
+| `ThreadUpdate` | Thread (logically) | `UpdateGroup`, `UpdateDocument`, `Stats`. |
+| `ThreadLibrary` | Thread (logically) | `Library` fan-out. |
+| `ThreadHNSW` | Thread (logically) | HNSW graph proxy: `Stats`, `Graph`, `NodeBatch`, `Node`, `DeleteNode`. |
 
-The Totem-hosted services are declared in the proto for documentation and type
-generation, but at runtime Seer does **not** call them as standalone RPCs.
+The Thread-hosted services are declared in the proto for documentation and type
+generation, but at runtime Sewn does **not** call them as standalone RPCs.
 Instead, every request/response message is also a `oneof` arm of
-`TotemSessionMessage`, and Seer delivers them over the open `Session` stream. The
+`ThreadSessionMessage`, and Sewn delivers them over the open `Session` stream. The
 envelope carries:
 
 - `correlation_id` — pairs a response with its request.
-- `totem_id` — set by the Totem on every ping so Seer can identify the stream.
-- `payload` — a `oneof` over `TotemSessionPing`/`Pong` plus every request and
+- `thread_id` — set by the Thread on every ping so Sewn can identify the stream.
+- `payload` — a `oneof` over `ThreadSessionPing`/`Pong` plus every request and
   response type (search, index, remove, library, HNSW, update, stats).
 
 When you add a new request/response pair, add it both as its own message *and* as
-a new `oneof` arm in `TotemSessionMessage`.
+a new `oneof` arm in `ThreadSessionMessage`.
 
 ## Generated code — `Sources/Conduit/Generated/`
 
 Generated by `protoc`; **do not edit by hand**.
 
-- `totem.pb.swift` — the SwiftProtobuf message types (`Totem_V1_*`).
-- `totem.grpc.swift` — the grpc-swift client stubs and server protocols.
+- `thread.pb.swift` — the SwiftProtobuf message types (`Thread_V1_*`).
+- `thread.grpc.swift` — the grpc-swift client stubs and server protocols.
 
 Regenerate with [`scripts/generate.sh`](scripts/generate.sh) after editing the
 proto. The script builds the `protoc-gen-grpc-swift` plugin from the package's
@@ -87,50 +87,50 @@ side can drop in.
 
 ### Client (`Client/`)
 
-- **`MothershipRegistrationClient`** — *used by Totem.* Owns the connection to
-  Seer. Registers (retrying until accepted), opens the `Session` stream, keeps it
+- **`MothershipRegistrationClient`** — *used by Thread.* Owns the connection to
+  Sewn. Registers (retrying until accepted), opens the `Session` stream, keeps it
   alive with 30 s pings, and reconnects with backoff on drop. Incoming requests
   are handed to a `SessionRequestHandling` dispatcher; the returned response is
   written back up the stream. Also exposes `sendAvailabilityUpdate`.
-- **`TotemQueryClient`** — *used by Seer.* The typed, caller-facing API for the
+- **`ThreadQueryClient`** — *used by Sewn.* The typed, caller-facing API for the
   fan-out RPCs (`search`, `index`, `remove`, `library`, `hnsw*`, `updateGroup`,
   `updateDocument`, `stats`). Each method wraps its request in a
-  `TotemSessionMessage`, sends it through `TotemSessionManager` to a specific
-  `TotemNode`, and unwraps the correlated response.
+  `ThreadSessionMessage`, sends it through `ThreadSessionManager` to a specific
+  `ThreadNode`, and unwraps the correlated response.
 
 ### Server (`Server/`)
 
-- **`TotemRegistrationServiceImpl`** — *used by Seer.* Implements the
-  `TotemRegistration` gRPC service. Handles `register`/`heartbeat`/
-  `updateAvailability` against a `TotemRegistry`, and runs the `session` handler:
-  it reads the Totem's opening ping, opens a managed channel in the
-  `TotemSessionManager`, then runs concurrent reader/writer tasks for the lifetime
+- **`ThreadRegistrationServiceImpl`** — *used by Sewn.* Implements the
+  `ThreadRegistration` gRPC service. Handles `register`/`heartbeat`/
+  `updateAvailability` against a `ThreadRegistry`, and runs the `session` handler:
+  it reads the Thread's opening ping, opens a managed channel in the
+  `ThreadSessionManager`, then runs concurrent reader/writer tasks for the lifetime
   of the stream.
 
 ### Session (`Session/`)
 
-- **`TotemSessionManager`** — *used by Seer.* The correlation engine. Holds one
-  outgoing channel per connected Totem and a map of in-flight
+- **`ThreadSessionManager`** — *used by Sewn.* The correlation engine. Holds one
+  outgoing channel per connected Thread and a map of in-flight
   `correlation_id → continuation`. `request(_:to:)` enqueues a message and
   suspends until the matching response arrives (or a timeout fires); `deliver(_:)`
   resumes the right continuation; `closeSession` cancels everything pending for a
-  dropped Totem. It deliberately stores an `AsyncStream.Continuation` rather than
+  dropped Thread. It deliberately stores an `AsyncStream.Continuation` rather than
   the raw gRPC writer so writes can never escape the stream's lifetime.
-- `TotemSessionError` — `noSession`, `unexpectedPayload`, `timeout`.
+- `ThreadSessionError` — `noSession`, `unexpectedPayload`, `timeout`.
 
 ### Node (`Node/`)
 
-- **`TotemNode`** — value type describing a registered Totem (id, host, ports,
-  `lastSeen`, `acceptingStorage`, `isActive`). Seer keys its registry and fan-out
+- **`ThreadNode`** — value type describing a registered Thread (id, host, ports,
+  `lastSeen`, `acceptingStorage`, `isActive`). Sewn keys its registry and fan-out
   on these.
 
 ### Protocols (`Protocols/`) — the seams consumers implement
 
-- **`TotemRegistry`** — *implemented by Seer.* Where `TotemRegistrationServiceImpl`
+- **`ThreadRegistry`** — *implemented by Sewn.* Where `ThreadRegistrationServiceImpl`
   writes registration, heartbeat, and availability updates (`registerNode`,
   `heartbeatNode`, `updateNodeAvailability`).
-- **`SessionRequestHandling`** — *implemented by Totem.* The dispatcher
-  `MothershipRegistrationClient` calls for each request Seer pushes down the
+- **`SessionRequestHandling`** — *implemented by Thread.* The dispatcher
+  `MothershipRegistrationClient` calls for each request Sewn pushes down the
   stream; returns the response message (or `nil` if unsupported).
 - **`ConduitLogger`** — *implemented by both.* Logging seam so consumers route
   Conduit's events through their own stack. `SwiftLogConduitLogger` is a default
@@ -145,9 +145,9 @@ side can drop in.
 
 | | Hosts / implements | Calls / consumes |
 | --- | --- | --- |
-| **Seer** (mothership) | `TotemRegistrationServiceImpl`, `TotemRegistry`, the gRPC server | `TotemQueryClient`, `TotemSessionManager`, `TotemNode` |
-| **Totem** (node) | `SessionRequestHandling` (request dispatcher) | `MothershipRegistrationClient` |
-| **Both** | `ConduitLogger` (+ `SwiftLogConduitLogger`) | generated `Totem_V1_*` types, `payloadName` |
+| **Sewn** (mothership) | `ThreadRegistrationServiceImpl`, `ThreadRegistry`, the gRPC server | `ThreadQueryClient`, `ThreadSessionManager`, `ThreadNode` |
+| **Thread** (node) | `SessionRequestHandling` (request dispatcher) | `MothershipRegistrationClient` |
+| **Both** | `ConduitLogger` (+ `SwiftLogConduitLogger`) | generated `Thread_V1_*` types, `payloadName` |
 
 ## Adding Conduit as a dependency
 
@@ -155,8 +155,8 @@ side can drop in.
 // Package.swift
 .package(url: "<conduit-repo-url>", from: "<version>"),
 // …
-.target(name: "Seer",  dependencies: [.product(name: "Conduit", package: "Conduit")]),
-.target(name: "Totem", dependencies: [.product(name: "Conduit", package: "Conduit")]),
+.target(name: "Sewn",  dependencies: [.product(name: "Conduit", package: "Conduit")]),
+.target(name: "Thread", dependencies: [.product(name: "Conduit", package: "Conduit")]),
 ```
 
 Conduit requires Swift 6.0 and macOS 15+, and links grpc-swift 2.x, the NIO HTTP/2

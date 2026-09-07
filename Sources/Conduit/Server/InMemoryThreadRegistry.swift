@@ -1,55 +1,55 @@
 import Foundation
 
-/// In-memory ``TotemRegistry`` for destinations that don't persist node state
-/// (e.g. the Fleet client). Tracks connected Totems and broadcasts the active
+/// In-memory ``ThreadRegistry`` for destinations that don't persist node state
+/// (e.g. the Fleet client). Tracks connected Threads and broadcasts the active
 /// list on every change so a UI can react.
-public actor InMemoryTotemRegistry: TotemRegistry {
+public actor InMemoryThreadRegistry: ThreadRegistry {
 
-    private var nodes: [UUID: TotemNode] = [:]
-    private var subscribers: [UUID: AsyncStream<[TotemNode]>.Continuation] = [:]
+    private var nodes: [UUID: ThreadNode] = [:]
+    private var subscribers: [UUID: AsyncStream<[ThreadNode]>.Continuation] = [:]
 
     public init() {}
 
-    // MARK: - TotemRegistry
+    // MARK: - ThreadRegistry
 
-    public func registerNode(_ node: TotemNode) async {
+    public func registerNode(_ node: ThreadNode) async {
         var node = node
         node.lastSeen = .now
-        nodes[node.totemId] = node
+        nodes[node.threadId] = node
         broadcast()
     }
 
-    public func heartbeatNode(totemId: UUID) async {
-        guard var node = nodes[totemId] else { return }
+    public func heartbeatNode(threadId: UUID) async {
+        guard var node = nodes[threadId] else { return }
         // heartbeatNode fires on EVERY session message; broadcasting (a full
         // filter+sort fanned out to all subscribers) only makes sense when a
         // node's active state actually flips, not per message.
         let wasActive = node.isActive
         node.lastSeen = .now
-        nodes[totemId] = node
+        nodes[threadId] = node
         if !wasActive { broadcast() }
     }
 
-    public func updateNodeAvailability(totemId: UUID, accepting: Bool) async {
-        guard var node = nodes[totemId] else { return }
+    public func updateNodeAvailability(threadId: UUID, accepting: Bool) async {
+        guard var node = nodes[threadId] else { return }
         node.acceptingStorage = accepting
-        nodes[totemId] = node
+        nodes[threadId] = node
         broadcast()
     }
 
     // MARK: - Reads
 
-    /// Totems seen recently enough to be considered connected.
-    public var activeNodes: [TotemNode] {
+    /// Threads seen recently enough to be considered connected.
+    public var activeNodes: [ThreadNode] {
         nodes.values
             .filter(\.isActive)
-            .sorted { $0.totemId.uuidString < $1.totemId.uuidString }
+            .sorted { $0.threadId.uuidString < $1.threadId.uuidString }
     }
 
-    public func node(_ id: UUID) -> TotemNode? { nodes[id] }
+    public func node(_ id: UUID) -> ThreadNode? { nodes[id] }
 
     /// Emits the active-node list now and on every registry change.
-    public func changes() -> AsyncStream<[TotemNode]> {
+    public func changes() -> AsyncStream<[ThreadNode]> {
         let id = UUID()
         return AsyncStream { continuation in
             subscribers[id] = continuation

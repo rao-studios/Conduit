@@ -1,16 +1,16 @@
 import Foundation
 
-public struct TotemNode: Sendable {
-    public let totemId: UUID
+public struct ThreadNode: Sendable {
+    public let threadId: UUID
     public var host: String
     public let grpcPort: Int
     public let httpPort: Int
     public var lastSeen: Date
     public var acceptingStorage: Bool
 
-    public init(totemId: UUID, host: String, grpcPort: Int, httpPort: Int,
+    public init(threadId: UUID, host: String, grpcPort: Int, httpPort: Int,
                 lastSeen: Date = .now, acceptingStorage: Bool = true) {
-        self.totemId = totemId
+        self.threadId = threadId
         self.host = host
         self.grpcPort = grpcPort
         self.httpPort = httpPort

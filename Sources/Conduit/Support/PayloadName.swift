@@ -1,6 +1,6 @@
 /// Human-readable name for a session payload, used in logs on both sides of
 /// the stream.
-public func payloadName(_ payload: Totem_V1_TotemSessionMessage.OneOf_Payload?) -> String {
+public func payloadName(_ payload: Thread_V1_ThreadSessionMessage.OneOf_Payload?) -> String {
     switch payload {
     case .ping:                  return "ping"
     case .pong:                  return "pong"

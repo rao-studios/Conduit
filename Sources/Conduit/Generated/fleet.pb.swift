@@ -30,7 +30,7 @@ public nonisolated struct Fleet_V1_ListAdaptersRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var totemID: String = String()
+  public var threadID: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -54,7 +54,7 @@ public nonisolated struct Fleet_V1_AdapterStatusRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var totemID: String = String()
+  public var threadID: String = String()
 
   public var abilityID: String = String()
 
@@ -112,7 +112,7 @@ public nonisolated struct Fleet_V1_TrainRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var totemID: String = String()
+  public var threadID: String = String()
 
   public var abilityID: String = String()
 
@@ -120,7 +120,7 @@ public nonisolated struct Fleet_V1_TrainRequest: Sendable {
 
   public var pairs: [Fleet_V1_TrainingPair] = []
 
-  /// Used when pairs is empty: Fleet pulls ExportCorpus from the local Totem.
+  /// Used when pairs is empty: Fleet pulls ExportCorpus from the local Thread.
   public var ownerID: String = String()
 
   public var groupIds: [String] = []
@@ -168,7 +168,7 @@ public nonisolated struct Fleet_V1_CompleteRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var totemID: String = String()
+  public var threadID: String = String()
 
   public var abilityID: String = String()
 
@@ -209,7 +209,7 @@ fileprivate nonisolated let _protobuf_package = "fleet.v1"
 
 nonisolated extension Fleet_V1_ListAdaptersRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ListAdaptersRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}totem_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -217,21 +217,21 @@ nonisolated extension Fleet_V1_ListAdaptersRequest: SwiftProtobuf.Message, Swift
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.totemID) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.totemID.isEmpty {
-      try visitor.visitSingularStringField(value: self.totemID, fieldNumber: 1)
+    if !self.threadID.isEmpty {
+      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fleet_V1_ListAdaptersRequest, rhs: Fleet_V1_ListAdaptersRequest) -> Bool {
-    if lhs.totemID != rhs.totemID {return false}
+    if lhs.threadID != rhs.threadID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -269,7 +269,7 @@ nonisolated extension Fleet_V1_ListAdaptersResponse: SwiftProtobuf.Message, Swif
 
 nonisolated extension Fleet_V1_AdapterStatusRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AdapterStatusRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}totem_id\0\u{3}ability_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}ability_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -277,7 +277,7 @@ nonisolated extension Fleet_V1_AdapterStatusRequest: SwiftProtobuf.Message, Swif
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.totemID) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.abilityID) }()
       default: break
       }
@@ -285,8 +285,8 @@ nonisolated extension Fleet_V1_AdapterStatusRequest: SwiftProtobuf.Message, Swif
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.totemID.isEmpty {
-      try visitor.visitSingularStringField(value: self.totemID, fieldNumber: 1)
+    if !self.threadID.isEmpty {
+      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 1)
     }
     if !self.abilityID.isEmpty {
       try visitor.visitSingularStringField(value: self.abilityID, fieldNumber: 2)
@@ -295,7 +295,7 @@ nonisolated extension Fleet_V1_AdapterStatusRequest: SwiftProtobuf.Message, Swif
   }
 
   public static func ==(lhs: Fleet_V1_AdapterStatusRequest, rhs: Fleet_V1_AdapterStatusRequest) -> Bool {
-    if lhs.totemID != rhs.totemID {return false}
+    if lhs.threadID != rhs.threadID {return false}
     if lhs.abilityID != rhs.abilityID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -414,7 +414,7 @@ nonisolated extension Fleet_V1_TrainingPair: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Fleet_V1_TrainRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TrainRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}totem_id\0\u{3}ability_id\0\u{3}model_id\0\u{1}pairs\0\u{3}owner_id\0\u{3}group_ids\0\u{3}document_id_prefix\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}ability_id\0\u{3}model_id\0\u{1}pairs\0\u{3}owner_id\0\u{3}group_ids\0\u{3}document_id_prefix\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -422,7 +422,7 @@ nonisolated extension Fleet_V1_TrainRequest: SwiftProtobuf.Message, SwiftProtobu
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.totemID) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.abilityID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.modelID) }()
       case 4: try { try decoder.decodeRepeatedMessageField(value: &self.pairs) }()
@@ -435,8 +435,8 @@ nonisolated extension Fleet_V1_TrainRequest: SwiftProtobuf.Message, SwiftProtobu
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.totemID.isEmpty {
-      try visitor.visitSingularStringField(value: self.totemID, fieldNumber: 1)
+    if !self.threadID.isEmpty {
+      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 1)
     }
     if !self.abilityID.isEmpty {
       try visitor.visitSingularStringField(value: self.abilityID, fieldNumber: 2)
@@ -460,7 +460,7 @@ nonisolated extension Fleet_V1_TrainRequest: SwiftProtobuf.Message, SwiftProtobu
   }
 
   public static func ==(lhs: Fleet_V1_TrainRequest, rhs: Fleet_V1_TrainRequest) -> Bool {
-    if lhs.totemID != rhs.totemID {return false}
+    if lhs.threadID != rhs.threadID {return false}
     if lhs.abilityID != rhs.abilityID {return false}
     if lhs.modelID != rhs.modelID {return false}
     if lhs.pairs != rhs.pairs {return false}
@@ -528,7 +528,7 @@ nonisolated extension Fleet_V1_TrainProgress: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Fleet_V1_CompleteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CompleteRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}totem_id\0\u{3}ability_id\0\u{1}cid\0\u{3}input_json\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}ability_id\0\u{1}cid\0\u{3}input_json\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -536,7 +536,7 @@ nonisolated extension Fleet_V1_CompleteRequest: SwiftProtobuf.Message, SwiftProt
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.totemID) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.abilityID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.cid) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.inputJson) }()
@@ -546,8 +546,8 @@ nonisolated extension Fleet_V1_CompleteRequest: SwiftProtobuf.Message, SwiftProt
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.totemID.isEmpty {
-      try visitor.visitSingularStringField(value: self.totemID, fieldNumber: 1)
+    if !self.threadID.isEmpty {
+      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 1)
     }
     if !self.abilityID.isEmpty {
       try visitor.visitSingularStringField(value: self.abilityID, fieldNumber: 2)
@@ -562,7 +562,7 @@ nonisolated extension Fleet_V1_CompleteRequest: SwiftProtobuf.Message, SwiftProt
   }
 
   public static func ==(lhs: Fleet_V1_CompleteRequest, rhs: Fleet_V1_CompleteRequest) -> Bool {
-    if lhs.totemID != rhs.totemID {return false}
+    if lhs.threadID != rhs.threadID {return false}
     if lhs.abilityID != rhs.abilityID {return false}
     if lhs.cid != rhs.cid {return false}
     if lhs.inputJson != rhs.inputJson {return false}

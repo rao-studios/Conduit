@@ -2,24 +2,24 @@ import Foundation
 import GRPCCore
 import GRPCNIOTransportHTTP2
 
-/// Reusable mothership gRPC server. Binds the `TotemRegistration` service so any
-/// destination (Seer, Fleet, …) can accept Totem connections and their session
+/// Reusable mothership gRPC server. Binds the `ThreadRegistration` service so any
+/// destination (Sewn, Fleet, …) can accept Thread connections and their session
 /// streams without re-writing the NIO bootstrap.
 ///
-/// Generalizes Seer's `SeerGRPCServer` — a consumer supplies a ``TotemRegistry``,
-/// a ``TotemSessionManager``, and a ``ConduitLogger``.
+/// Generalizes Sewn's `SewnGRPCServer` — a consumer supplies a ``ThreadRegistry``,
+/// a ``ThreadSessionManager``, and a ``ConduitLogger``.
 public actor ConduitMothershipServer {
 
-    private let registry: any TotemRegistry
+    private let registry: any ThreadRegistry
     private let mothershipId: UUID
-    private let sessionManager: TotemSessionManager
+    private let sessionManager: ThreadSessionManager
     private let logger: any ConduitLogger
     private var serverTask: Task<Void, Error>?
 
     public init(
-        registry: any TotemRegistry,
+        registry: any ThreadRegistry,
         mothershipId: UUID,
-        sessionManager: TotemSessionManager,
+        sessionManager: ThreadSessionManager,
         logger: any ConduitLogger
     ) {
         self.registry = registry
@@ -33,7 +33,7 @@ public actor ConduitMothershipServer {
     /// Start listening on `port`. No-op if already running.
     public func start(port: Int) {
         guard serverTask == nil else { return }
-        let service = TotemRegistrationServiceImpl(
+        let service = ThreadRegistrationServiceImpl(
             registry: registry, mothershipId: mothershipId,
             sessionManager: sessionManager, logger: logger)
         let logger = self.logger
@@ -44,7 +44,7 @@ public actor ConduitMothershipServer {
                     transportSecurity: .plaintext,
                     config: .defaults {
                         $0.rpc.maxRequestPayloadSize = 100 * 1024 * 1024
-                        // Send keepalive PINGs to detect dead Totem connections,
+                        // Send keepalive PINGs to detect dead Thread connections,
                         // and permit the client's keepalive (its 15 s interval is
                         // above this minimum, so it won't be struck off).
                         $0.connection.keepalive.time = .seconds(15)
