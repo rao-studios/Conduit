@@ -163,6 +163,46 @@ public nonisolated struct Fleet_V1_TrainProgress: Sendable {
   fileprivate var _slot: Fleet_V1_LoRASlot? = nil
 }
 
+public nonisolated struct Fleet_V1_CompleteRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var totemID: String = String()
+
+  public var abilityID: String = String()
+
+  /// Optional pin: when set and it differs from the slot's current cid the
+  /// call is refused with the live cid, so a client refreshes its slots.
+  public var cid: String = String()
+
+  public var inputJson: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Fleet_V1_CompleteResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var outputJson: String = String()
+
+  public var rawText: String = String()
+
+  public var forcedFraction: Double = 0
+
+  public var promptTokens: Int32 = 0
+
+  public var cid: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "fleet.v1"
@@ -481,6 +521,101 @@ nonisolated extension Fleet_V1_TrainProgress: SwiftProtobuf.Message, SwiftProtob
     if lhs.loss != rhs.loss {return false}
     if lhs.message != rhs.message {return false}
     if lhs._slot != rhs._slot {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Fleet_V1_CompleteRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CompleteRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}totem_id\0\u{3}ability_id\0\u{1}cid\0\u{3}input_json\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.totemID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.abilityID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.cid) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.inputJson) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.totemID.isEmpty {
+      try visitor.visitSingularStringField(value: self.totemID, fieldNumber: 1)
+    }
+    if !self.abilityID.isEmpty {
+      try visitor.visitSingularStringField(value: self.abilityID, fieldNumber: 2)
+    }
+    if !self.cid.isEmpty {
+      try visitor.visitSingularStringField(value: self.cid, fieldNumber: 3)
+    }
+    if !self.inputJson.isEmpty {
+      try visitor.visitSingularStringField(value: self.inputJson, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fleet_V1_CompleteRequest, rhs: Fleet_V1_CompleteRequest) -> Bool {
+    if lhs.totemID != rhs.totemID {return false}
+    if lhs.abilityID != rhs.abilityID {return false}
+    if lhs.cid != rhs.cid {return false}
+    if lhs.inputJson != rhs.inputJson {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Fleet_V1_CompleteResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CompleteResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}output_json\0\u{3}raw_text\0\u{3}forced_fraction\0\u{3}prompt_tokens\0\u{1}cid\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.outputJson) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.rawText) }()
+      case 3: try { try decoder.decodeSingularDoubleField(value: &self.forcedFraction) }()
+      case 4: try { try decoder.decodeSingularInt32Field(value: &self.promptTokens) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.cid) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.outputJson.isEmpty {
+      try visitor.visitSingularStringField(value: self.outputJson, fieldNumber: 1)
+    }
+    if !self.rawText.isEmpty {
+      try visitor.visitSingularStringField(value: self.rawText, fieldNumber: 2)
+    }
+    if self.forcedFraction.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.forcedFraction, fieldNumber: 3)
+    }
+    if self.promptTokens != 0 {
+      try visitor.visitSingularInt32Field(value: self.promptTokens, fieldNumber: 4)
+    }
+    if !self.cid.isEmpty {
+      try visitor.visitSingularStringField(value: self.cid, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fleet_V1_CompleteResponse, rhs: Fleet_V1_CompleteResponse) -> Bool {
+    if lhs.outputJson != rhs.outputJson {return false}
+    if lhs.rawText != rhs.rawText {return false}
+    if lhs.forcedFraction != rhs.forcedFraction {return false}
+    if lhs.promptTokens != rhs.promptTokens {return false}
+    if lhs.cid != rhs.cid {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

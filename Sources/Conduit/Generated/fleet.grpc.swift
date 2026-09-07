@@ -56,11 +56,24 @@ public enum Fleet_V1_FleetLoRA {
                 method: "Train"
             )
         }
+        /// Namespace for "Complete" metadata.
+        public enum Complete {
+            /// Request type for "Complete".
+            public typealias Input = Fleet_V1_CompleteRequest
+            /// Response type for "Complete".
+            public typealias Output = Fleet_V1_CompleteResponse
+            /// Descriptor for "Complete".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "fleet.v1.FleetLoRA"),
+                method: "Complete"
+            )
+        }
         /// Descriptors for all methods in the "fleet.v1.FleetLoRA" service.
         public static let descriptors: [GRPCCore.MethodDescriptor] = [
             ListAdapters.descriptor,
             AdapterStatus.descriptor,
-            Train.descriptor
+            Train.descriptor,
+            Complete.descriptor
         ]
     }
 }
@@ -127,6 +140,25 @@ extension Fleet_V1_FleetLoRA {
             request: GRPCCore.StreamingServerRequest<Fleet_V1_TrainRequest>,
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.StreamingServerResponse<Fleet_V1_TrainProgress>
+
+        /// Handle the "Complete" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > One gated completion through a ready slot. Fleet resolves the schema by
+        /// > cid itself; the caller sends only the input document.
+        ///
+        /// - Parameters:
+        ///   - request: A streaming request of `Fleet_V1_CompleteRequest` messages.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A streaming response of `Fleet_V1_CompleteResponse` messages.
+        func complete(
+            request: GRPCCore.StreamingServerRequest<Fleet_V1_CompleteRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.StreamingServerResponse<Fleet_V1_CompleteResponse>
     }
 
     /// Service protocol for the "fleet.v1.FleetLoRA" service.
@@ -178,6 +210,25 @@ extension Fleet_V1_FleetLoRA {
             request: GRPCCore.ServerRequest<Fleet_V1_TrainRequest>,
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.StreamingServerResponse<Fleet_V1_TrainProgress>
+
+        /// Handle the "Complete" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > One gated completion through a ready slot. Fleet resolves the schema by
+        /// > cid itself; the caller sends only the input document.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Fleet_V1_CompleteRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A response containing a single `Fleet_V1_CompleteResponse` message.
+        func complete(
+            request: GRPCCore.ServerRequest<Fleet_V1_CompleteRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.ServerResponse<Fleet_V1_CompleteResponse>
     }
 
     /// Simple service protocol for the "fleet.v1.FleetLoRA" service.
@@ -228,6 +279,25 @@ extension Fleet_V1_FleetLoRA {
             response: GRPCCore.RPCWriter<Fleet_V1_TrainProgress>,
             context: GRPCCore.ServerContext
         ) async throws
+
+        /// Handle the "Complete" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > One gated completion through a ready slot. Fleet resolves the schema by
+        /// > cid itself; the caller sends only the input document.
+        ///
+        /// - Parameters:
+        ///   - request: A `Fleet_V1_CompleteRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A `Fleet_V1_CompleteResponse` to respond with.
+        func complete(
+            request: Fleet_V1_CompleteRequest,
+            context: GRPCCore.ServerContext
+        ) async throws -> Fleet_V1_CompleteResponse
     }
 }
 
@@ -263,6 +333,17 @@ extension Fleet_V1_FleetLoRA.StreamingServiceProtocol {
             serializer: GRPCProtobuf.ProtobufSerializer<Fleet_V1_TrainProgress>(),
             handler: { request, context in
                 try await self.train(
+                    request: request,
+                    context: context
+                )
+            }
+        )
+        router.registerHandler(
+            forMethod: Fleet_V1_FleetLoRA.Method.Complete.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Fleet_V1_CompleteRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Fleet_V1_CompleteResponse>(),
+            handler: { request, context in
+                try await self.complete(
                     request: request,
                     context: context
                 )
@@ -305,6 +386,17 @@ extension Fleet_V1_FleetLoRA.ServiceProtocol {
             context: context
         )
         return response
+    }
+
+    public func complete(
+        request: GRPCCore.StreamingServerRequest<Fleet_V1_CompleteRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.StreamingServerResponse<Fleet_V1_CompleteResponse> {
+        let response = try await self.complete(
+            request: GRPCCore.ServerRequest(stream: request),
+            context: context
+        )
+        return GRPCCore.StreamingServerResponse(single: response)
     }
 }
 
@@ -351,6 +443,19 @@ extension Fleet_V1_FleetLoRA.SimpleServiceProtocol {
                 )
                 return [:]
             }
+        )
+    }
+
+    public func complete(
+        request: GRPCCore.ServerRequest<Fleet_V1_CompleteRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.ServerResponse<Fleet_V1_CompleteResponse> {
+        return GRPCCore.ServerResponse<Fleet_V1_CompleteResponse>(
+            message: try await self.complete(
+                request: request.message,
+                context: context
+            ),
+            metadata: [:]
         )
     }
 }
@@ -419,6 +524,30 @@ extension Fleet_V1_FleetLoRA {
             deserializer: some GRPCCore.MessageDeserializer<Fleet_V1_TrainProgress>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.StreamingClientResponse<Fleet_V1_TrainProgress>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "Complete" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > One gated completion through a ready slot. Fleet resolves the schema by
+        /// > cid itself; the caller sends only the input document.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Fleet_V1_CompleteRequest` message.
+        ///   - serializer: A serializer for `Fleet_V1_CompleteRequest` messages.
+        ///   - deserializer: A deserializer for `Fleet_V1_CompleteResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        func complete<Result>(
+            request: GRPCCore.ClientRequest<Fleet_V1_CompleteRequest>,
+            serializer: some GRPCCore.MessageSerializer<Fleet_V1_CompleteRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Fleet_V1_CompleteResponse>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Fleet_V1_CompleteResponse>) async throws -> Result
         ) async throws -> Result where Result: Sendable
     }
 
@@ -525,6 +654,41 @@ extension Fleet_V1_FleetLoRA {
                 onResponse: handleResponse
             )
         }
+
+        /// Call the "Complete" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > One gated completion through a ready slot. Fleet resolves the schema by
+        /// > cid itself; the caller sends only the input document.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Fleet_V1_CompleteRequest` message.
+        ///   - serializer: A serializer for `Fleet_V1_CompleteRequest` messages.
+        ///   - deserializer: A deserializer for `Fleet_V1_CompleteResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func complete<Result>(
+            request: GRPCCore.ClientRequest<Fleet_V1_CompleteRequest>,
+            serializer: some GRPCCore.MessageSerializer<Fleet_V1_CompleteRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Fleet_V1_CompleteResponse>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Fleet_V1_CompleteResponse>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Fleet_V1_FleetLoRA.Method.Complete.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
     }
 }
 
@@ -599,6 +763,36 @@ extension Fleet_V1_FleetLoRA.ClientProtocol {
             request: request,
             serializer: GRPCProtobuf.ProtobufSerializer<Fleet_V1_TrainRequest>(),
             deserializer: GRPCProtobuf.ProtobufDeserializer<Fleet_V1_TrainProgress>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "Complete" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > One gated completion through a ready slot. Fleet resolves the schema by
+    /// > cid itself; the caller sends only the input document.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Fleet_V1_CompleteRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func complete<Result>(
+        request: GRPCCore.ClientRequest<Fleet_V1_CompleteRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Fleet_V1_CompleteResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.complete(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Fleet_V1_CompleteRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Fleet_V1_CompleteResponse>(),
             options: options,
             onResponse: handleResponse
         )
@@ -687,6 +881,40 @@ extension Fleet_V1_FleetLoRA.ClientProtocol {
             metadata: metadata
         )
         return try await self.train(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "Complete" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > One gated completion through a ready slot. Fleet resolves the schema by
+    /// > cid itself; the caller sends only the input document.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func complete<Result>(
+        _ message: Fleet_V1_CompleteRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Fleet_V1_CompleteResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Fleet_V1_CompleteRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.complete(
             request: request,
             options: options,
             onResponse: handleResponse

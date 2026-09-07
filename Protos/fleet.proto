@@ -10,6 +10,9 @@ service FleetLoRA {
   rpc ListAdapters  (ListAdaptersRequest)  returns (ListAdaptersResponse);
   rpc AdapterStatus (AdapterStatusRequest) returns (LoRASlot);
   rpc Train         (TrainRequest)         returns (stream TrainProgress);
+  // One gated completion through a ready slot. Fleet resolves the schema by
+  // cid itself; the caller sends only the input document.
+  rpc Complete      (CompleteRequest)      returns (CompleteResponse);
 }
 
 message ListAdaptersRequest {
@@ -60,4 +63,21 @@ message TrainProgress {
   float    loss      = 3;
   string   message   = 4;
   LoRASlot slot      = 5;  // set on finished
+}
+
+message CompleteRequest {
+  string totem_id   = 1;
+  string ability_id = 2;
+  // Optional pin: when set and it differs from the slot's current cid the
+  // call is refused with the live cid, so a client refreshes its slots.
+  string cid        = 3;
+  string input_json = 4;
+}
+
+message CompleteResponse {
+  string output_json     = 1;
+  string raw_text        = 2;
+  double forced_fraction = 3;
+  int32  prompt_tokens   = 4;
+  string cid             = 5;
 }
