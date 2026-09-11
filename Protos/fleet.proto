@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package fleet.v1;
+
+// Fleet hosts this — Mary dials it for named LoRA slots (one per
+// thread_id × ability_id). Training still content-addresses the input
+// set; the slot path is the user-facing identity and overwrites in place.
+
+service FleetLoRA {
+  rpc ListAdapters  (ListAdaptersRequest)  returns (ListAdaptersResponse);
+  rpc AdapterStatus (AdapterStatusRequest) returns (LoRASlot);
+  rpc Train         (TrainRequest)         returns (stream TrainProgress);
+  // One gated completion through a ready slot. Fleet resolves the schema by
+  // cid itself; the caller sends only the input document.
+  rpc Complete      (CompleteRequest)      returns (CompleteResponse);
+}
+
+message ListAdaptersRequest {
+  string thread_id = 1;
+}
+
+message ListAdaptersResponse {
+  repeated LoRASlot slots = 1;
+}
+
+message AdapterStatusRequest {
+  string thread_id   = 1;
+  string ability_id = 2;
+}
+
+message LoRASlot {
+  string ability_id     = 1;
+  int32  generation     = 2;
+  int32  pair_count     = 3;
+  int64  trained_at_unix = 4;
+  bool   ready          = 5;
+  string artifact_path  = 6;
+  string cid            = 7;
+  string model_id       = 8;
+  bytes  schema_json    = 9;
+  bool   training       = 10;
+}
+
+message TrainingPair {
+  string input_json  = 1;
+  string output_json = 2;
+}
+
+message TrainRequest {
+  string thread_id            = 1;
+  string ability_id          = 2;
+  string model_id            = 3;
+  repeated TrainingPair pairs = 4;
+  // Used when pairs is empty: Fleet pulls ExportCorpus from the local Thread.
+  string          owner_id           = 5;
+  repeated string group_ids          = 6;
+  string          document_id_prefix = 7;
+}
+
+message TrainProgress {
+  string   stage     = 1;  // preparing, loading, step, validation, finished, error
+  int32    iteration = 2;
+  float    loss      = 3;
+  string   message   = 4;
+  LoRASlot slot      = 5;  // set on finished
+}
+
+message CompleteRequest {
+  string thread_id   = 1;
+  string ability_id = 2;
+  // Optional pin: when set and it differs from the slot's current cid the
+  // call is refused with the live cid, so a client refreshes its slots.
+  string cid        = 3;
+  string input_json = 4;
+}
+
+message CompleteResponse {
+  string output_json     = 1;
+  string raw_text        = 2;
+  double forced_fraction = 3;
+  int32  prompt_tokens   = 4;
+  string cid             = 5;
+}
