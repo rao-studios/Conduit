@@ -27,6 +27,9 @@ public actor MothershipRegistrationClient {
     public let threadHTTPPort: Int
     public let requestDispatcher: any SessionRequestHandling
     private let logger: any ConduitLogger
+    /// Applied to every RPC this client makes, on every connection it opens
+    /// (e.g. ``StackSecretClientInterceptor`` in Ambient's local stack).
+    private let interceptors: [any ClientInterceptor]
     private var sessionTask: Task<Void, Never>?
     private var heartbeatTask: Task<Void, Never>?
 
@@ -38,7 +41,8 @@ public actor MothershipRegistrationClient {
         threadGRPCPort: Int,
         threadHTTPPort: Int,
         requestDispatcher: any SessionRequestHandling,
-        logger: any ConduitLogger
+        logger: any ConduitLogger,
+        interceptors: [any ClientInterceptor] = []
     ) {
         self.mothershipHost      = mothershipHost
         self.mothershipGRPCPort  = mothershipGRPCPort
@@ -48,6 +52,7 @@ public actor MothershipRegistrationClient {
         self.threadHTTPPort       = threadHTTPPort
         self.requestDispatcher   = requestDispatcher
         self.logger              = logger
+        self.interceptors        = interceptors
     }
 
     // MARK: - Lifecycle
@@ -122,7 +127,7 @@ public actor MothershipRegistrationClient {
     /// session stream so it can never be queued behind large index responses.
     private func sendUnaryHeartbeat() async {
         do {
-            try await withGRPCClient(transport: makeTransport()) { [self] client in
+            try await withGRPCClient(transport: makeTransport(), interceptors: interceptors) { [self] client in
                 let stub = Thread_V1_ThreadRegistration.Client(wrapping: client)
                 var req = Thread_V1_HeartbeatRequest()
                 req.threadID = threadId.uuidString
@@ -139,7 +144,7 @@ public actor MothershipRegistrationClient {
 
     public func sendAvailabilityUpdate(acceptingStorage: Bool) async {
         do {
-            try await withGRPCClient(transport: makeTransport()) { client in
+            try await withGRPCClient(transport: makeTransport(), interceptors: interceptors) { client in
                 let stub = Thread_V1_ThreadRegistration.Client(wrapping: client)
                 var req = Thread_V1_AvailabilityUpdateRequest()
                 req.threadID = self.threadId.uuidString
@@ -159,7 +164,7 @@ public actor MothershipRegistrationClient {
     /// them locally and sends responses back. Reconnects automatically on failure.
     private func runSession() async {
         do {
-            try await withGRPCClient(transport: makeTransport()) { [self] client in
+            try await withGRPCClient(transport: makeTransport(), interceptors: interceptors) { [self] client in
                 let stub = Thread_V1_ThreadRegistration.Client(wrapping: client)
 
                 // ── 1. Register (one attempt per fresh connection) ───────────
@@ -314,6 +319,10 @@ public actor MothershipRegistrationClient {
             }
         } catch is CancellationError {
             // Normal shutdown — don't log.
+        } catch let error as RPCError where error.code == .alreadyExists {
+            logger.warning("MothershipRegistrationClient: mothership still holds a live session for this node id — another Thread with the same id, or one it hasn't reaped yet; retrying in 5 s (\(error.message))")
+        } catch let error as RPCError where error.code == .unauthenticated {
+            logger.error("MothershipRegistrationClient: mothership refused the stack secret — is AMBIENT_STACK_SECRET identical in both processes? retrying in 5 s")
         } catch {
             logger.warning("MothershipRegistrationClient: session ended — \(error)")
         }

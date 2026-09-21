@@ -92,7 +92,20 @@ public final class ThreadRegistrationServiceImpl: Thread_V1_ThreadRegistration.S
         // Open the managed outgoing channel. The writer task below is the ONLY
         // code that calls response.write(), and it only runs while session() is
         // executing, so the gRPC stream is guaranteed open for every write.
-        let outgoing = await sessionManager.openSession(for: threadId)
+        //
+        // One live session per Thread. A second stream for the same id — a
+        // duplicate node, or a reconnect racing a handler the mothership hasn't
+        // torn down yet — is refused rather than silently stealing the channel
+        // from under the handler that owns it; the client backs off and retries.
+        let opened: (handle: SessionHandle, outgoing: AsyncStream<Thread_V1_ThreadSessionMessage>)
+        do {
+            opened = try await sessionManager.openSession(for: threadId)
+        } catch ThreadSessionError.sessionAlreadyOpen {
+            logger.warning("ThreadSession: Refused a second session for Thread \(threadId) from \(context.remotePeer): one is already live")
+            throw RPCError(code: .alreadyExists, message: "Thread \(threadId) already has a live session; retry after it closes")
+        }
+        let handle = opened.handle
+        let outgoing = opened.outgoing
         await registry.heartbeatNode(threadId: threadId)
         logger.info("ThreadSession", "Session opened for Thread \(threadId)")
 
@@ -147,7 +160,7 @@ public final class ThreadRegistrationServiceImpl: Thread_V1_ThreadRegistration.S
         // Close the session and cancel pending continuations BEFORE returning.
         // This must happen while session() is still on the call stack — the moment
         // session() returns, gRPC marks the stream closed and any write would crash.
-        await sessionManager.closeSession(for: threadId)
+        await sessionManager.closeSession(handle)
         logger.info("ThreadSession", "Session closed for Thread \(threadId)")
     }
 }
