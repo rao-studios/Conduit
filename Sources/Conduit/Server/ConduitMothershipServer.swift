@@ -7,25 +7,30 @@ import GRPCNIOTransportHTTP2
 /// streams without re-writing the NIO bootstrap.
 ///
 /// Generalizes Sewn's `SewnGRPCServer` — a consumer supplies a ``ThreadRegistry``,
-/// a ``ThreadSessionManager``, and a ``ConduitLogger``.
+/// a ``ThreadSessionManager``, a ``ConduitLogger`` and, optionally, server
+/// interceptors applied to every RPC (e.g. ``StackSecretServerInterceptor``
+/// in Ambient's local stack).
 public actor ConduitMothershipServer {
 
     private let registry: any ThreadRegistry
     private let mothershipId: UUID
     private let sessionManager: ThreadSessionManager
     private let logger: any ConduitLogger
+    private let interceptors: [any ServerInterceptor]
     private var serverTask: Task<Void, Error>?
 
     public init(
         registry: any ThreadRegistry,
         mothershipId: UUID,
         sessionManager: ThreadSessionManager,
-        logger: any ConduitLogger
+        logger: any ConduitLogger,
+        interceptors: [any ServerInterceptor] = []
     ) {
         self.registry = registry
         self.mothershipId = mothershipId
         self.sessionManager = sessionManager
         self.logger = logger
+        self.interceptors = interceptors
     }
 
     public var isRunning: Bool { serverTask != nil }
@@ -37,6 +42,7 @@ public actor ConduitMothershipServer {
             registry: registry, mothershipId: mothershipId,
             sessionManager: sessionManager, logger: logger)
         let logger = self.logger
+        let interceptors = self.interceptors
         serverTask = Task {
             let server = GRPCServer(
                 transport: .http2NIOPosix(
@@ -64,7 +70,8 @@ public actor ConduitMothershipServer {
                         $0.compression.enabledAlgorithms = [.gzip, .none]
                     }
                 ),
-                services: [service]
+                services: [service],
+                interceptors: interceptors
             )
             logger.info("ConduitMothershipServer", "gRPC server listening on port \(port)")
             try await server.serve()

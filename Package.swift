@@ -25,5 +25,13 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
             ]
         ),
+        .testTarget(
+            name: "ConduitTests",
+            dependencies: [
+                "Conduit",
+                .product(name: "GRPCInProcessTransport", package: "grpc-swift"),
+            ],
+            path: "Tests/ConduitTests"
+        ),
     ]
 )
