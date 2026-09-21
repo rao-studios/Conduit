@@ -252,6 +252,28 @@ public nonisolated struct Thread_V1_ThreadIndexItem: Sendable {
   /// Thread extracts when both are empty)
   public var relationships: [Thread_V1_ThreadGraphRelationIn] = []
 
+  /// Optional, parallel by index to `texts`: partitions the caller describes
+  /// itself. A non-empty `embedding` is used as-is (Thread does not embed that
+  /// text) and is kept, so it can be read back exactly; a non-empty `url` is the
+  /// partition's own address instead of the document's.
+  public var partitions: [Thread_V1_ThreadPartitionInput] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Thread_V1_ThreadPartitionInput: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// precomputed; empty = Thread embeds texts[i]
+  public var embedding: [Float] = []
+
+  /// "" = the document's own url
+  public var url: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -533,6 +555,9 @@ public nonisolated struct Thread_V1_ThreadDocumentsRequest: Sendable {
 
   public var documentIds: [String] = []
 
+  /// fill ThreadDocumentContent.partitions
+  public var includeEmbeddings: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -559,6 +584,27 @@ public nonisolated struct Thread_V1_ThreadDocumentContent: Sendable {
   public var texts: [String] = []
 
   public var mediaType: String = String()
+
+  /// Only when the request sets include_embeddings: one entry per partition, in
+  /// the same order as `texts`.
+  public var partitions: [Thread_V1_ThreadPartitionOutput] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Thread_V1_ThreadPartitionOutput: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var url: String = String()
+
+  /// empty unless the caller supplied it at index time
+  public var embedding: [Float] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -596,6 +642,9 @@ public nonisolated struct Thread_V1_ThreadExportCorpusRequest: Sendable {
 
   /// 0 = no limit
   public var limit: Int32 = 0
+
+  /// fill ThreadDocumentContent.partitions
+  public var includeEmbeddings: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1439,7 +1488,7 @@ nonisolated extension Thread_V1_ThreadIndexRequest: SwiftProtobuf.Message, Swift
 
 nonisolated extension Thread_V1_ThreadIndexItem: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ThreadIndexItem"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}document_id\0\u{1}texts\0\u{1}tags\0\u{1}name\0\u{1}metadata\0\u{3}media_type\0\u{1}entities\0\u{1}relationships\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}document_id\0\u{1}texts\0\u{1}tags\0\u{1}name\0\u{1}metadata\0\u{3}media_type\0\u{1}entities\0\u{1}relationships\0\u{1}partitions\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1455,6 +1504,7 @@ nonisolated extension Thread_V1_ThreadIndexItem: SwiftProtobuf.Message, SwiftPro
       case 6: try { try decoder.decodeSingularStringField(value: &self.mediaType) }()
       case 7: try { try decoder.decodeRepeatedMessageField(value: &self.entities) }()
       case 8: try { try decoder.decodeRepeatedMessageField(value: &self.relationships) }()
+      case 9: try { try decoder.decodeRepeatedMessageField(value: &self.partitions) }()
       default: break
       }
     }
@@ -1485,6 +1535,9 @@ nonisolated extension Thread_V1_ThreadIndexItem: SwiftProtobuf.Message, SwiftPro
     if !self.relationships.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.relationships, fieldNumber: 8)
     }
+    if !self.partitions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.partitions, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1497,6 +1550,42 @@ nonisolated extension Thread_V1_ThreadIndexItem: SwiftProtobuf.Message, SwiftPro
     if lhs.mediaType != rhs.mediaType {return false}
     if lhs.entities != rhs.entities {return false}
     if lhs.relationships != rhs.relationships {return false}
+    if lhs.partitions != rhs.partitions {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Thread_V1_ThreadPartitionInput: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ThreadPartitionInput"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}embedding\0\u{1}url\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedFloatField(value: &self.embedding) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.url) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.embedding.isEmpty {
+      try visitor.visitPackedFloatField(value: self.embedding, fieldNumber: 1)
+    }
+    if !self.url.isEmpty {
+      try visitor.visitSingularStringField(value: self.url, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Thread_V1_ThreadPartitionInput, rhs: Thread_V1_ThreadPartitionInput) -> Bool {
+    if lhs.embedding != rhs.embedding {return false}
+    if lhs.url != rhs.url {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2133,7 +2222,7 @@ nonisolated extension Thread_V1_ThreadLibraryResponse: SwiftProtobuf.Message, Sw
 
 nonisolated extension Thread_V1_ThreadDocumentsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ThreadDocumentsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{3}document_ids\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{3}document_ids\0\u{3}include_embeddings\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2143,6 +2232,7 @@ nonisolated extension Thread_V1_ThreadDocumentsRequest: SwiftProtobuf.Message, S
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.ownerID) }()
       case 2: try { try decoder.decodeRepeatedStringField(value: &self.documentIds) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.includeEmbeddings) }()
       default: break
       }
     }
@@ -2155,12 +2245,16 @@ nonisolated extension Thread_V1_ThreadDocumentsRequest: SwiftProtobuf.Message, S
     if !self.documentIds.isEmpty {
       try visitor.visitRepeatedStringField(value: self.documentIds, fieldNumber: 2)
     }
+    if self.includeEmbeddings != false {
+      try visitor.visitSingularBoolField(value: self.includeEmbeddings, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Thread_V1_ThreadDocumentsRequest, rhs: Thread_V1_ThreadDocumentsRequest) -> Bool {
     if lhs.ownerID != rhs.ownerID {return false}
     if lhs.documentIds != rhs.documentIds {return false}
+    if lhs.includeEmbeddings != rhs.includeEmbeddings {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2168,7 +2262,7 @@ nonisolated extension Thread_V1_ThreadDocumentsRequest: SwiftProtobuf.Message, S
 
 nonisolated extension Thread_V1_ThreadDocumentContent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ThreadDocumentContent"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}owner_id\0\u{3}group_id\0\u{3}group_label\0\u{3}created_at\0\u{1}texts\0\u{3}media_type\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}owner_id\0\u{3}group_id\0\u{3}group_label\0\u{3}created_at\0\u{1}texts\0\u{3}media_type\0\u{1}partitions\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2184,6 +2278,7 @@ nonisolated extension Thread_V1_ThreadDocumentContent: SwiftProtobuf.Message, Sw
       case 6: try { try decoder.decodeSingularInt64Field(value: &self.createdAt) }()
       case 7: try { try decoder.decodeRepeatedStringField(value: &self.texts) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.mediaType) }()
+      case 9: try { try decoder.decodeRepeatedMessageField(value: &self.partitions) }()
       default: break
       }
     }
@@ -2214,6 +2309,9 @@ nonisolated extension Thread_V1_ThreadDocumentContent: SwiftProtobuf.Message, Sw
     if !self.mediaType.isEmpty {
       try visitor.visitSingularStringField(value: self.mediaType, fieldNumber: 8)
     }
+    if !self.partitions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.partitions, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2226,6 +2324,47 @@ nonisolated extension Thread_V1_ThreadDocumentContent: SwiftProtobuf.Message, Sw
     if lhs.createdAt != rhs.createdAt {return false}
     if lhs.texts != rhs.texts {return false}
     if lhs.mediaType != rhs.mediaType {return false}
+    if lhs.partitions != rhs.partitions {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Thread_V1_ThreadPartitionOutput: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ThreadPartitionOutput"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}url\0\u{1}embedding\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.url) }()
+      case 3: try { try decoder.decodeRepeatedFloatField(value: &self.embedding) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.url.isEmpty {
+      try visitor.visitSingularStringField(value: self.url, fieldNumber: 2)
+    }
+    if !self.embedding.isEmpty {
+      try visitor.visitPackedFloatField(value: self.embedding, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Thread_V1_ThreadPartitionOutput, rhs: Thread_V1_ThreadPartitionOutput) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.url != rhs.url {return false}
+    if lhs.embedding != rhs.embedding {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2263,7 +2402,7 @@ nonisolated extension Thread_V1_ThreadDocumentsResponse: SwiftProtobuf.Message, 
 
 nonisolated extension Thread_V1_ThreadExportCorpusRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ThreadExportCorpusRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{3}group_ids\0\u{3}document_id_prefix\0\u{3}after_id\0\u{1}limit\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{3}group_ids\0\u{3}document_id_prefix\0\u{3}after_id\0\u{1}limit\0\u{3}include_embeddings\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2276,6 +2415,7 @@ nonisolated extension Thread_V1_ThreadExportCorpusRequest: SwiftProtobuf.Message
       case 3: try { try decoder.decodeSingularStringField(value: &self.documentIDPrefix) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.afterID) }()
       case 5: try { try decoder.decodeSingularInt32Field(value: &self.limit) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.includeEmbeddings) }()
       default: break
       }
     }
@@ -2297,6 +2437,9 @@ nonisolated extension Thread_V1_ThreadExportCorpusRequest: SwiftProtobuf.Message
     if self.limit != 0 {
       try visitor.visitSingularInt32Field(value: self.limit, fieldNumber: 5)
     }
+    if self.includeEmbeddings != false {
+      try visitor.visitSingularBoolField(value: self.includeEmbeddings, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2306,6 +2449,7 @@ nonisolated extension Thread_V1_ThreadExportCorpusRequest: SwiftProtobuf.Message
     if lhs.documentIDPrefix != rhs.documentIDPrefix {return false}
     if lhs.afterID != rhs.afterID {return false}
     if lhs.limit != rhs.limit {return false}
+    if lhs.includeEmbeddings != rhs.includeEmbeddings {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

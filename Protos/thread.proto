@@ -102,6 +102,16 @@ message ThreadIndexItem {
   string          media_type  = 6;
   repeated ThreadGraphEntityIn   entities      = 7;  // caller-provided graph payload (optional;
   repeated ThreadGraphRelationIn relationships = 8;  // Thread extracts when both are empty)
+  // Optional, parallel by index to `texts`: partitions the caller describes
+  // itself. A non-empty `embedding` is used as-is (Thread does not embed that
+  // text) and is kept, so it can be read back exactly; a non-empty `url` is the
+  // partition's own address instead of the document's.
+  repeated ThreadPartitionInput  partitions    = 9;
+}
+
+message ThreadPartitionInput {
+  repeated float embedding = 1;  // precomputed; empty = Thread embeds texts[i]
+  string         url       = 2;  // "" = the document's own url
 }
 
 message ThreadGraphEntityIn {
@@ -214,8 +224,9 @@ message ThreadLibraryResponse {
 }
 
 message ThreadDocumentsRequest {
-  string          owner_id     = 1;
-  repeated string document_ids = 2;
+  string          owner_id           = 1;
+  repeated string document_ids       = 2;
+  bool            include_embeddings = 3;  // fill ThreadDocumentContent.partitions
 }
 
 message ThreadDocumentContent {
@@ -227,6 +238,15 @@ message ThreadDocumentContent {
   int64           created_at  = 6;
   repeated string texts       = 7;  // partition texts in stored order; join for full content
   string          media_type  = 8;
+  // Only when the request sets include_embeddings: one entry per partition, in
+  // the same order as `texts`.
+  repeated ThreadPartitionOutput partitions = 9;
+}
+
+message ThreadPartitionOutput {
+  string         id        = 1;
+  string         url       = 2;
+  repeated float embedding = 3;  // empty unless the caller supplied it at index time
 }
 
 message ThreadDocumentsResponse {
@@ -239,6 +259,7 @@ message ThreadExportCorpusRequest {
   string          document_id_prefix  = 3;  // e.g. "mary-behavior-"; empty = any
   string          after_id            = 4;  // exclusive cursor on sorted document id
   int32           limit               = 5;  // 0 = no limit
+  bool            include_embeddings  = 6;  // fill ThreadDocumentContent.partitions
 }
 
 message ThreadExportCorpusResponse {
