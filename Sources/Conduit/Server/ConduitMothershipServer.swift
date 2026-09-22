@@ -9,7 +9,8 @@ import GRPCNIOTransportHTTP2
 /// Generalizes Sewn's `SewnGRPCServer` — a consumer supplies a ``ThreadRegistry``,
 /// a ``ThreadSessionManager``, a ``ConduitLogger`` and, optionally, server
 /// interceptors applied to every RPC (e.g. ``StackSecretServerInterceptor``
-/// in Ambient's local stack).
+/// in Ambient's local stack) and, for a shared stack, the resolver that tells
+/// the registration service which app each Thread belongs to.
 public actor ConduitMothershipServer {
 
     private let registry: any ThreadRegistry
@@ -17,6 +18,7 @@ public actor ConduitMothershipServer {
     private let sessionManager: ThreadSessionManager
     private let logger: any ConduitLogger
     private let interceptors: [any ServerInterceptor]
+    private let callerResolver: StackSecretResolver?
     private var serverTask: Task<Void, Error>?
 
     public init(
@@ -24,13 +26,15 @@ public actor ConduitMothershipServer {
         mothershipId: UUID,
         sessionManager: ThreadSessionManager,
         logger: any ConduitLogger,
-        interceptors: [any ServerInterceptor] = []
+        interceptors: [any ServerInterceptor] = [],
+        callerResolver: StackSecretResolver? = nil
     ) {
         self.registry = registry
         self.mothershipId = mothershipId
         self.sessionManager = sessionManager
         self.logger = logger
         self.interceptors = interceptors
+        self.callerResolver = callerResolver
     }
 
     public var isRunning: Bool { serverTask != nil }
@@ -40,7 +44,8 @@ public actor ConduitMothershipServer {
         guard serverTask == nil else { return }
         let service = ThreadRegistrationServiceImpl(
             registry: registry, mothershipId: mothershipId,
-            sessionManager: sessionManager, logger: logger)
+            sessionManager: sessionManager, logger: logger,
+            callerResolver: callerResolver)
         let logger = self.logger
         let interceptors = self.interceptors
         serverTask = Task {
