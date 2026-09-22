@@ -322,7 +322,11 @@ public actor MothershipRegistrationClient {
         } catch let error as RPCError where error.code == .alreadyExists {
             logger.warning("MothershipRegistrationClient: mothership still holds a live session for this node id — another Thread with the same id, or one it hasn't reaped yet; retrying in 5 s (\(error.message))")
         } catch let error as RPCError where error.code == .unauthenticated {
-            logger.error("MothershipRegistrationClient: mothership refused the stack secret — is AMBIENT_STACK_SECRET identical in both processes? retrying in 5 s")
+            logger.error("MothershipRegistrationClient: mothership refused the stack secret — this node presents its launcher's AMBIENT_STACK_SECRET; a one-app stack needs the same value in both processes, a shared ~/.rao stack must know it as secrets/<app>. Retrying in 5 s")
+        } catch let error as RPCError where error.code == .permissionDenied {
+            logger.error("MothershipRegistrationClient: mothership refused this node — its id is registered to another app, or this peer isn't loopback; retrying in 5 s (\(error.message))")
+        } catch let error as RPCError where error.code == .failedPrecondition {
+            logger.warning("MothershipRegistrationClient: mothership doesn't know this node yet — re-registering in 5 s (\(error.message))")
         } catch {
             logger.warning("MothershipRegistrationClient: session ended — \(error)")
         }

@@ -6,14 +6,17 @@
 //        app launched for itself answers only RPCs that carry the launch's
 //        secret in x-ambient-secret and arrive over loopback; the Thread it
 //        launched stamps that secret on every RPC it sends.
-//  IN:   AMBIENT_STACK_SECRET, set by the launcher (Ambient's
-//        LocalStackManager) in both children's environments. Sewn hands it
-//        to `StackSecretServerInterceptor.forLocalMode`; Thread hands it to
-//        `StackSecretClientInterceptor`. Hosted deployments set nothing and
-//        get no interceptor — nothing here changes for them.
+//  IN:   One app's stack: AMBIENT_STACK_SECRET, set by the launcher in both
+//        children's environments; Sewn hands it to
+//        `StackSecretServerInterceptor.forLocalMode(secret:)`, Thread to
+//        `StackSecretClientInterceptor`. A shared ~/.rao stack: Sewn knows
+//        every app's secret and hands a resolver (presented secret → app id)
+//        to `forLocalMode(resolver:)`, so one mothership accepts each app's
+//        Thread and knows which app it belongs to. Hosted deployments set
+//        nothing and get no interceptor — nothing here changes for them.
 //  OUT:  PERMISSION_DENIED for a peer that isn't loopback; UNAUTHENTICATED
-//        without the secret. The HTTP side of the same contract is
-//        X-Ambient-Secret in Sewn/Thread's StackSecretMiddleware.
+//        without a secret the server knows. The HTTP side of the same
+//        contract is X-Ambient-Secret in Sewn/Thread's StackSecretMiddleware.
 //  PIN:  A refusal is logged with the method and the peer, never the
 //        presented value — a wrong guess in a log line is still a secret.
 //        The compare is constant-time so a wrong guess learns nothing from
@@ -22,6 +25,12 @@
 
 import Foundation
 import GRPCCore
+
+/// Maps a presented stack secret to the app it belongs to — `"ambient"`,
+/// `"craft"`, `"veil"` — or nil when it is no app's secret. A shared stack's
+/// mothership builds one from the keyring in ~/.rao (RaoStack's `StackMode`);
+/// Conduit only needs the answer, never the secrets themselves.
+public typealias StackSecretResolver = @Sendable (_ presented: String) -> String?
 
 /// The metadata key both halves agree on, and the checks the server applies.
 public enum StackSecretMetadata {
@@ -34,6 +43,13 @@ public enum StackSecretMetadata {
     public static func presented(in metadata: Metadata) -> String? {
         var values = metadata[stringValues: key].makeIterator()
         return values.next()
+    }
+
+    /// The app whose secret `metadata` presents, per `resolver`; nil when the
+    /// request carries no secret or one no app owns.
+    public static func callerApp(in metadata: Metadata, resolver: StackSecretResolver) -> String? {
+        guard let presented = presented(in: metadata), !presented.isEmpty else { return nil }
+        return resolver(presented)
     }
 
     /// Constant-time byte compare. False for nil and for any length mismatch
@@ -68,13 +84,20 @@ public enum StackSecretMetadata {
 
 // MARK: - Server side
 
-/// Refuses every RPC that doesn't carry the stack secret from a loopback peer.
-/// Install on the mothership's `GRPCServer` (``ConduitMothershipServer`` takes
-/// it through `interceptors:`); build it with ``forLocalMode(secret:logger:)``
-/// so a deployment without a secret gets no interceptor at all.
+/// Refuses every RPC that doesn't carry a stack secret the server knows, from
+/// a loopback peer. Install on the mothership's `GRPCServer`
+/// (``ConduitMothershipServer`` takes it through `interceptors:`); build it
+/// with ``forLocalMode(secret:logger:)`` for one app's stack, or
+/// ``forLocalMode(resolver:logger:)`` for a shared one, so a deployment
+/// without either gets no interceptor at all.
 public struct StackSecretServerInterceptor: ServerInterceptor {
 
-    private let secret: String
+    private enum Check: Sendable {
+        case secret(String)
+        case resolver(StackSecretResolver)
+    }
+
+    private let check: Check
     private let requireLoopbackPeer: Bool
     private let logger: (any ConduitLogger)?
 
@@ -84,7 +107,18 @@ public struct StackSecretServerInterceptor: ServerInterceptor {
     ///     On by default — the local stack has no business answering the LAN.
     ///   - logger: Where refusals are noted (method and peer, never the value).
     public init(secret: String, requireLoopbackPeer: Bool = true, logger: (any ConduitLogger)? = nil) {
-        self.secret = secret
+        self.check = .secret(secret)
+        self.requireLoopbackPeer = requireLoopbackPeer
+        self.logger = logger
+    }
+
+    /// A shared stack: accept any secret `resolver` maps to an app.
+    /// - Parameters:
+    ///   - resolver: Presented secret → app id, or nil for no app's secret.
+    ///   - requireLoopbackPeer: As for ``init(secret:requireLoopbackPeer:logger:)``.
+    ///   - logger: Where refusals are noted (method and peer, never the value).
+    public init(resolver: @escaping StackSecretResolver, requireLoopbackPeer: Bool = true, logger: (any ConduitLogger)? = nil) {
+        self.check = .resolver(resolver)
         self.requireLoopbackPeer = requireLoopbackPeer
         self.logger = logger
     }
@@ -94,6 +128,13 @@ public struct StackSecretServerInterceptor: ServerInterceptor {
     public static func forLocalMode(secret: String?, logger: (any ConduitLogger)? = nil) -> [any ServerInterceptor] {
         guard let secret, !secret.isEmpty else { return [] }
         return [StackSecretServerInterceptor(secret: secret, logger: logger)]
+    }
+
+    /// The interceptor list for a shared stack's mothership: one interceptor
+    /// when a resolver is given, none when it is nil.
+    public static func forLocalMode(resolver: StackSecretResolver?, logger: (any ConduitLogger)? = nil) -> [any ServerInterceptor] {
+        guard let resolver else { return [] }
+        return [StackSecretServerInterceptor(resolver: resolver, logger: logger)]
     }
 
     public func intercept<Input: Sendable, Output: Sendable>(
@@ -110,9 +151,17 @@ public struct StackSecretServerInterceptor: ServerInterceptor {
         }
 
         let presented = StackSecretMetadata.presented(in: request.metadata)
-        guard StackSecretMetadata.matches(presented, secret: secret) else {
-            logger?.warning("StackSecret: refused \(method) from \(peer) — missing or wrong \(StackSecretMetadata.key)")
-            throw RPCError(code: .unauthenticated, message: "Missing or wrong x-ambient-secret")
+        switch check {
+        case .secret(let secret):
+            guard StackSecretMetadata.matches(presented, secret: secret) else {
+                logger?.warning("StackSecret: refused \(method) from \(peer) — missing or wrong \(StackSecretMetadata.key)")
+                throw RPCError(code: .unauthenticated, message: "Missing or wrong x-ambient-secret")
+            }
+        case .resolver(let resolver):
+            guard let presented, !presented.isEmpty, resolver(presented) != nil else {
+                logger?.warning("StackSecret: refused \(method) from \(peer) — missing or unknown \(StackSecretMetadata.key)")
+                throw RPCError(code: .unauthenticated, message: "Missing or unknown x-ambient-secret")
+            }
         }
 
         return try await next(request, context)

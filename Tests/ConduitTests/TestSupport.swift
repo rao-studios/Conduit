@@ -65,12 +65,14 @@ struct InProcessMothership {
     func run<Result: Sendable>(
         serverInterceptors: [any ServerInterceptor] = [],
         clientInterceptors: [any ClientInterceptor] = [],
+        callerResolver: StackSecretResolver? = nil,
         _ body: (Stub) async throws -> Result
     ) async throws -> Result {
         let transport = InProcessTransport()
         let service = ThreadRegistrationServiceImpl(
             registry: registry, mothershipId: mothershipId,
-            sessionManager: sessionManager, logger: logger)
+            sessionManager: sessionManager, logger: logger,
+            callerResolver: callerResolver)
         let server = GRPCServer(transport: transport.server, services: [service], interceptors: serverInterceptors)
         let client = GRPCClient(transport: transport.client, interceptors: clientInterceptors)
 

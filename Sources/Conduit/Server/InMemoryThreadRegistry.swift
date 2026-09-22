@@ -37,6 +37,10 @@ public actor InMemoryThreadRegistry: ThreadRegistry {
         broadcast()
     }
 
+    public func registeredNode(threadId: UUID) async -> ThreadNode? {
+        nodes[threadId]
+    }
+
     // MARK: - Reads
 
     /// Threads seen recently enough to be considered connected.
