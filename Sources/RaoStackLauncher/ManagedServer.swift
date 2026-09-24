@@ -105,6 +105,16 @@ public actor ManagedServer {
         return remember(try await spawnSerialized(timeout: timeout))
     }
 
+    /// Whether a node left by an earlier launch runs an older build than this launch would:
+    /// another binary, or the same file rebuilt since the process started.
+    static func isOutdated(recordedBinary: String, processStart: UInt64?, wanted: URL) -> Bool {
+        guard ProcessProbe.resolvedPath(wanted) == recordedBinary else { return true }
+        guard let processStart,
+              let modified = (try? FileManager.default.attributesOfItem(atPath: recordedBinary))?[.modificationDate] as? Date
+        else { return true }
+        return UInt64(max(0, modified.timeIntervalSince1970) * 1_000_000) > processStart
+    }
+
     private func remember(_ handle: ServerHandle) -> ServerHandle {
         self.handle = handle
         return handle
@@ -120,8 +130,13 @@ public actor ManagedServer {
             return nil
         }
         if spec.role == .thread, let launcher = record.launcher,
-           launcher.process != ProcessProbe.current, !ProcessProbe.isRunning(launcher.process) {
-            // Left by an earlier run of this app: possibly an older binary.
+           launcher.process != ProcessProbe.current, !ProcessProbe.isRunning(launcher.process),
+           Self.isOutdated(recordedBinary: record.binary, processStart: record.process.processStart,
+                           wanted: spec.executable) {
+            // Left by an earlier run of this app, and running something other than what this
+            // launch would run: replace it. A current node is adopted instead — replacing
+            // every orphan made each one-shot CLI run pay a full node start and table
+            // restore before its first search.
             await Self.terminate(pid)
             RunRecord.remove(spec.runRecord)
             return nil

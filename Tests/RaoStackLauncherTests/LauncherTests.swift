@@ -207,6 +207,24 @@ final class ManagedServerTests: XCTestCase {
         XCTAssertNil(RunRecord.load(spec.runRecord))
     }
 
+    /// An orphaned node is replaced only when it is not what this launch would run.
+    func testAnOrphanIsReplacedOnlyWhenOutdated() throws {
+        let test = LauncherTestHome()
+        let binary = try test.file("thread", contents: "#!/bin/sh\n")
+        let recorded = ProcessProbe.resolvedPath(binary)
+        let modified = try XCTUnwrap((try FileManager.default.attributesOfItem(atPath: recorded))[.modificationDate] as? Date)
+        let before = UInt64(modified.timeIntervalSince1970 * 1_000_000)
+        XCTAssertFalse(ManagedServer.isOutdated(recordedBinary: recorded, processStart: before + 5_000_000, wanted: binary),
+                       "started after the binary was built: current, adopt it")
+        XCTAssertTrue(ManagedServer.isOutdated(recordedBinary: recorded, processStart: before - 5_000_000, wanted: binary),
+                      "the binary was rebuilt after it started: replace it")
+        let other = try test.file("thread-2", contents: "#!/bin/sh\n")
+        XCTAssertTrue(ManagedServer.isOutdated(recordedBinary: recorded, processStart: before + 5_000_000, wanted: other),
+                      "this launch runs another binary: replace it")
+        XCTAssertTrue(ManagedServer.isOutdated(recordedBinary: recorded, processStart: nil, wanted: binary),
+                      "no start time to compare: replace it, as before")
+    }
+
     func testAServerThatExitsReportsItsLog() async throws {
         let test = LauncherTestHome()
         let script = try test.file("dies", contents: "#!/bin/sh\necho 'bad flag' >&2\nexit 3\n")
