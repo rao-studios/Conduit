@@ -134,6 +134,17 @@ public nonisolated struct Thread_V1_ThreadSearchRequest: Sendable {
   /// query entity terms for graph matching
   public var entities: [String] = []
 
+  /// How the node reads the query. "code": `entities` and the identifiers in
+  /// `query_text` (backticked, dotted, CamelCase, snake_case) are matched exactly
+  /// against entity names with their namespace prefix (sym:, type:, memory:)
+  /// stripped, and applied as a per-document boost — never a gate; the
+  /// relationship-embedding match and expansion are skipped; only partitions
+  /// deposited with media_type "code" are returned. "text": only text
+  /// partitions, otherwise today's instrument. "": exactly the behaviour before
+  /// this field existed. Results are sorted by score and top_k is honoured
+  /// whatever this says.
+  public var mediaType: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -175,6 +186,14 @@ public nonisolated struct Thread_V1_ThreadGraphTrace: Sendable {
   public var expansionEdgeIds: [String] = []
 
   public var expandedDocumentCount: Int32 = 0
+
+  /// Stored names of matched_entity_ids, parallel by index ("type:posix_spawn").
+  public var matchedEntityNames: [String] = []
+
+  /// The media_type the node applied ("code" | "text" | ""). A node that
+  /// predates the field leaves it empty on a "code" request, which is how a
+  /// caller learns its spec was ignored.
+  public var mediaType: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1229,7 +1248,7 @@ nonisolated extension Thread_V1_AvailabilityUpdateResponse: SwiftProtobuf.Messag
 
 nonisolated extension Thread_V1_ThreadSearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ThreadSearchRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}query_embedding\0\u{3}query_entity_embedding\0\u{3}owner_id\0\u{1}scope\0\u{3}top_k\0\u{3}group_ids\0\u{1}aggregate\0\u{3}query_text\0\u{1}entities\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}query_embedding\0\u{3}query_entity_embedding\0\u{3}owner_id\0\u{1}scope\0\u{3}top_k\0\u{3}group_ids\0\u{1}aggregate\0\u{3}query_text\0\u{1}entities\0\u{3}media_type\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1246,6 +1265,7 @@ nonisolated extension Thread_V1_ThreadSearchRequest: SwiftProtobuf.Message, Swif
       case 7: try { try decoder.decodeSingularBoolField(value: &self.aggregate) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.queryText) }()
       case 9: try { try decoder.decodeRepeatedStringField(value: &self.entities) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.mediaType) }()
       default: break
       }
     }
@@ -1279,6 +1299,9 @@ nonisolated extension Thread_V1_ThreadSearchRequest: SwiftProtobuf.Message, Swif
     if !self.entities.isEmpty {
       try visitor.visitRepeatedStringField(value: self.entities, fieldNumber: 9)
     }
+    if !self.mediaType.isEmpty {
+      try visitor.visitSingularStringField(value: self.mediaType, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1292,6 +1315,7 @@ nonisolated extension Thread_V1_ThreadSearchRequest: SwiftProtobuf.Message, Swif
     if lhs.aggregate != rhs.aggregate {return false}
     if lhs.queryText != rhs.queryText {return false}
     if lhs.entities != rhs.entities {return false}
+    if lhs.mediaType != rhs.mediaType {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1338,7 +1362,7 @@ nonisolated extension Thread_V1_ThreadSearchResponse: SwiftProtobuf.Message, Swi
 
 nonisolated extension Thread_V1_ThreadGraphTrace: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ThreadGraphTrace"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}matched_entity_ids\0\u{3}expansion_edge_ids\0\u{3}expanded_document_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}matched_entity_ids\0\u{3}expansion_edge_ids\0\u{3}expanded_document_count\0\u{3}matched_entity_names\0\u{3}media_type\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1349,6 +1373,8 @@ nonisolated extension Thread_V1_ThreadGraphTrace: SwiftProtobuf.Message, SwiftPr
       case 1: try { try decoder.decodeRepeatedStringField(value: &self.matchedEntityIds) }()
       case 2: try { try decoder.decodeRepeatedStringField(value: &self.expansionEdgeIds) }()
       case 3: try { try decoder.decodeSingularInt32Field(value: &self.expandedDocumentCount) }()
+      case 4: try { try decoder.decodeRepeatedStringField(value: &self.matchedEntityNames) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.mediaType) }()
       default: break
       }
     }
@@ -1364,6 +1390,12 @@ nonisolated extension Thread_V1_ThreadGraphTrace: SwiftProtobuf.Message, SwiftPr
     if self.expandedDocumentCount != 0 {
       try visitor.visitSingularInt32Field(value: self.expandedDocumentCount, fieldNumber: 3)
     }
+    if !self.matchedEntityNames.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.matchedEntityNames, fieldNumber: 4)
+    }
+    if !self.mediaType.isEmpty {
+      try visitor.visitSingularStringField(value: self.mediaType, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1371,6 +1403,8 @@ nonisolated extension Thread_V1_ThreadGraphTrace: SwiftProtobuf.Message, SwiftPr
     if lhs.matchedEntityIds != rhs.matchedEntityIds {return false}
     if lhs.expansionEdgeIds != rhs.expansionEdgeIds {return false}
     if lhs.expandedDocumentCount != rhs.expandedDocumentCount {return false}
+    if lhs.matchedEntityNames != rhs.matchedEntityNames {return false}
+    if lhs.mediaType != rhs.mediaType {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

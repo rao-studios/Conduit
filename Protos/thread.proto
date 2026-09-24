@@ -60,6 +60,16 @@ message ThreadSearchRequest {
   bool            aggregate              = 7;
   string          query_text             = 8;  // raw query; Thread embeds if query_embedding is empty
   repeated string entities               = 9;  // query entity terms for graph matching
+  // How the node reads the query. "code": `entities` and the identifiers in
+  // `query_text` (backticked, dotted, CamelCase, snake_case) are matched exactly
+  // against entity names with their namespace prefix (sym:, type:, memory:)
+  // stripped, and applied as a per-document boost — never a gate; the
+  // relationship-embedding match and expansion are skipped; only partitions
+  // deposited with media_type "code" are returned. "text": only text
+  // partitions, otherwise today's instrument. "": exactly the behaviour before
+  // this field existed. Results are sorted by score and top_k is honoured
+  // whatever this says.
+  string          media_type             = 10;
 }
 
 message ThreadSearchResponse {
@@ -73,6 +83,12 @@ message ThreadGraphTrace {
   repeated string matched_entity_ids      = 1;
   repeated string expansion_edge_ids      = 2;
   int32           expanded_document_count = 3;
+  // Stored names of matched_entity_ids, parallel by index ("type:posix_spawn").
+  repeated string matched_entity_names    = 4;
+  // The media_type the node applied ("code" | "text" | ""). A node that
+  // predates the field leaves it empty on a "code" request, which is how a
+  // caller learns its spec was ignored.
+  string          media_type              = 5;
 }
 
 message ThreadPartitionResult {
