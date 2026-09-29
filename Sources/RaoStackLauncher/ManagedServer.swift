@@ -13,12 +13,15 @@
 //        and started when recorded, it runs the recorded binary, it listens
 //        on the port, and it proves the secret. A Thread is this app's alone:
 //        one left by an earlier run is replaced, one a still-running copy of
-//        the app started is shared. A Sewn that can't prove the secret is
-//        replaced only when no other app holds a lease on it; otherwise the
-//        launch fails loudly rather than pulling it out from under them.
-//        Starting is serialized across processes by the spec's start lock.
-//        Sewn is spawned in its own session so it outlives the app that
-//        started it while others still need it.
+//        the app started is shared. Sewn is one per Mac and every app has
+//        authority over its build: a stale Sewn (`sewnIsStale`) is replaced by
+//        whichever app finds it, whoever holds a lease — they reconnect to the
+//        new one. A current Sewn that can't prove the secret is replaced only
+//        when no other app holds a lease on it; otherwise the launch fails
+//        loudly rather than pulling it out from under them. Starting is
+//        serialized across processes by the spec's start lock. Sewn is spawned
+//        in its own session so it outlives the app that started it while
+//        others still need it.
 //
 
 #if os(macOS)
@@ -106,13 +109,26 @@ public actor ManagedServer {
     }
 
     /// Whether a node left by an earlier launch runs an older build than this launch would:
-    /// another binary, or the same file rebuilt since the process started.
+    /// another binary, or the same file rebuilt or reinstalled since the process started.
+    /// The file's change time decides, not its modification time: an installer's copy keeps
+    /// the build's mtime, so a Sewn installed after its predecessor started looked older.
     static func isOutdated(recordedBinary: String, processStart: UInt64?, wanted: URL) -> Bool {
         guard ProcessProbe.resolvedPath(wanted) == recordedBinary else { return true }
-        guard let processStart,
-              let modified = (try? FileManager.default.attributesOfItem(atPath: recordedBinary))?[.modificationDate] as? Date
-        else { return true }
-        return UInt64(max(0, modified.timeIntervalSince1970) * 1_000_000) > processStart
+        guard let processStart, let changed = ProcessProbe.changeTime(ofFile: recordedBinary) else { return true }
+        return changed > processStart
+    }
+
+    /// Whether a running Sewn should give way to the build this launch runs, whoever holds
+    /// it. The same binary: when that file was replaced or rebuilt after the process started
+    /// (an update installed while it ran). Another binary — a checkout build someone chose —
+    /// only when its contract is older than this app's. `contract` is nil for a Sewn that
+    /// didn't prove itself: only its build is judged.
+    public static func sewnIsStale(recordedBinary: String, processStart: UInt64?, contract: Int?, wanted: URL) -> Bool {
+        if ProcessProbe.resolvedPath(wanted) == recordedBinary {
+            return isOutdated(recordedBinary: recordedBinary, processStart: processStart, wanted: wanted)
+        }
+        guard let contract else { return false }
+        return contract < RaoContract.version
     }
 
     private func remember(_ handle: ServerHandle) -> ServerHandle {
@@ -144,15 +160,19 @@ public actor ManagedServer {
         let found = await verdict()
         let listening = ProcessProbe.listeningPIDs(port: spec.ports.http).contains(pid)
         if case .ours(let contract) = found, listening {
-            if spec.role == .sewn, (contract ?? 0) < RaoContract.version, othersNeedIt().isEmpty {
-                // Older than this app's contract and nobody else needs it.
+            if spec.role == .sewn, Self.sewnIsStale(recordedBinary: record.binary, processStart: record.process.processStart,
+                                                    contract: contract ?? 0, wanted: spec.executable) {
+                // An older build than this app runs. Any app may bring the one Sewn up to
+                // date; the apps holding it find the new one on their next check.
                 await Self.terminate(pid)
                 RunRecord.remove(spec.runRecord)
                 return nil
             }
             return ServerHandle(pid: pid, ports: spec.ports, adopted: true, contract: contract)
         }
-        if spec.role == .sewn {
+        if spec.role == .sewn,
+           !Self.sewnIsStale(recordedBinary: record.binary, processStart: record.process.processStart,
+                             contract: nil, wanted: spec.executable) {
             let holders = othersNeedIt()
             if !holders.isEmpty { throw ManagedServerError.sharedSewnUnproven(holders: holders) }
         }
@@ -180,6 +200,11 @@ public actor ManagedServer {
                 return nil
             }
             // A Sewn another launcher started without leaving a record.
+            if Self.sewnIsStale(recordedBinary: path, processStart: ProcessProbe.startTime(of: pid),
+                                contract: contract ?? 0, wanted: spec.executable) {
+                await Self.terminate(pid)
+                return nil
+            }
             if let stamp = ProcessProbe.stamp(of: pid) {
                 try? RunRecord(process: stamp, binary: path, ports: spec.ports, launcher: nil, startedAt: Date())
                     .write(spec.runRecord)
@@ -190,19 +215,38 @@ public actor ManagedServer {
         }
     }
 
-    private func spawnSerialized(timeout: TimeInterval) async throws -> ServerHandle {
-        try PrivateFile.ensureDirectory(spec.startLock.deletingLastPathComponent())
-        let lock = try FileLock(spec.startLock)
+    /// Stops what the run record names, whoever else holds it, and starts this launch's
+    /// build: an explicit restart. For Sewn, the apps holding it reconnect to the new one.
+    public func restart(timeout: TimeInterval = 60) async throws -> ServerHandle {
         let deadline = Date().addingTimeInterval(timeout)
-        while !lock.tryLock() {
-            guard Date() < deadline else { throw ManagedServerError.timedOut(logTail: "another launcher held \(spec.startLock.lastPathComponent)") }
-            try await Task.sleep(for: .milliseconds(200))
-        }
+        let lock = try await takeStartLock(until: deadline)
+        defer { lock.unlock() }
+        // The run record, checked, names what runs now; a handle may name one another
+        // app has since replaced.
+        handle = nil
+        await stop()
+        if let adopted = try await adoptByPort() { return remember(adopted) }
+        return remember(try await spawn(deadline: deadline))
+    }
+
+    private func spawnSerialized(timeout: TimeInterval) async throws -> ServerHandle {
+        let deadline = Date().addingTimeInterval(timeout)
+        let lock = try await takeStartLock(until: deadline)
         defer { lock.unlock() }
         // Someone may have started it while this launcher waited.
         if let adopted = try await adoptRecorded() { return adopted }
         if let adopted = try await adoptByPort() { return adopted }
         return try await spawn(deadline: deadline)
+    }
+
+    private func takeStartLock(until deadline: Date) async throws -> FileLock {
+        try PrivateFile.ensureDirectory(spec.startLock.deletingLastPathComponent())
+        let lock = try FileLock(spec.startLock)
+        while !lock.tryLock() {
+            guard Date() < deadline else { throw ManagedServerError.timedOut(logTail: "another launcher held \(spec.startLock.lastPathComponent)") }
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        return lock
     }
 
     private func spawn(deadline: Date) async throws -> ServerHandle {

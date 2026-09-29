@@ -135,7 +135,7 @@ port = int(sys.argv[1]); secret = os.environ.get("AMBIENT_STACK_SECRET", "")
 class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         nonce = self.headers.get("X-Ambient-Nonce") or ""
-        body = {"stack": "proof", "contract": 1}
+        body = {"stack": "proof", "contract": int(os.environ.get("STAND_IN_CONTRACT", "1"))}
         if nonce:
             body["proof"] = hmac.new(secret.encode(), ("ambient-stack-health-v1:" + nonce).encode(), hashlib.sha256).hexdigest()
         data = json.dumps(body).encode()
@@ -160,9 +160,11 @@ final class ManagedServerTests: XCTestCase {
         return Int(UInt16(bigEndian: address.sin_port))
     }
 
-    private func spec(_ test: LauncherTestHome, script: URL, secret: String, port: Int) -> LaunchSpec {
-        LaunchSpec(role: .thread, executable: script, arguments: [String(port)],
-                   environment: ["PATH": "/usr/bin:/bin", "AMBIENT_STACK_SECRET": secret],
+    private func spec(_ test: LauncherTestHome, script: URL, secret: String, port: Int,
+                      role: LaunchSpec.Role = .thread, contract: Int = RaoContract.version) -> LaunchSpec {
+        LaunchSpec(role: role, executable: script, arguments: [String(port)],
+                   environment: ["PATH": "/usr/bin:/bin", "AMBIENT_STACK_SECRET": secret,
+                                 "STAND_IN_CONTRACT": String(contract)],
                    workingDirectory: test.home.appDirectory(.craft), ports: RaoPorts(http: port, grpc: port),
                    runRecord: test.home.threadRunRecord(for: .craft), logFile: test.home.threadLogFile(for: .craft),
                    challengeApp: .craft)
@@ -223,6 +225,86 @@ final class ManagedServerTests: XCTestCase {
                       "this launch runs another binary: replace it")
         XCTAssertTrue(ManagedServer.isOutdated(recordedBinary: recorded, processStart: nil, wanted: binary),
                       "no start time to compare: replace it, as before")
+    }
+
+    /// The installer copies Sewn into place, and a copy keeps the build's mtime: a Sewn
+    /// installed after the running one started must still read as newer than it.
+    func testAReinstallIsNewerThanTheProcessWhateverItsMtime() throws {
+        let test = LauncherTestHome()
+        let binary = try test.file("sewn-server", contents: "#!/bin/sh\n")
+        let path = ProcessProbe.resolvedPath(binary)
+        let startedFiveSecondsAgo = UInt64(Date().timeIntervalSince1970 * 1_000_000) - 5_000_000
+        let anHourAgo = timeval(tv_sec: time(nil) - 3600, tv_usec: 0)
+        var times = [anHourAgo, anHourAgo]
+        XCTAssertEqual(utimes(path, &times), 0)
+        XCTAssertTrue(ManagedServer.isOutdated(recordedBinary: path, processStart: startedFiveSecondsAgo, wanted: binary),
+                      "built an hour ago, put in place just now: newer than a process five seconds old")
+    }
+
+    func testWhenTheSharedSewnIsStale() throws {
+        let test = LauncherTestHome()
+        let installed = try test.file("sewn-server", contents: "#!/bin/sh\n")
+        let path = ProcessProbe.resolvedPath(installed)
+        let changed = try XCTUnwrap(ProcessProbe.changeTime(ofFile: path))
+        let before = changed - 5_000_000, after = changed + 5_000_000
+        let checkout = ProcessProbe.resolvedPath(try test.file("checkout-sewn-server", contents: "#!/bin/sh\n"))
+        let current = RaoContract.version
+
+        XCTAssertFalse(ManagedServer.sewnIsStale(recordedBinary: path, processStart: after, contract: current, wanted: installed),
+                       "the build this app runs, started after it was installed: adopt it")
+        XCTAssertTrue(ManagedServer.sewnIsStale(recordedBinary: path, processStart: before, contract: current, wanted: installed),
+                      "installed again while it ran: replace it, same contract or not")
+        XCTAssertTrue(ManagedServer.sewnIsStale(recordedBinary: path, processStart: before, contract: nil, wanted: installed),
+                      "unproven, and an old build: replace it")
+        XCTAssertFalse(ManagedServer.sewnIsStale(recordedBinary: checkout, processStart: before, contract: current, wanted: installed),
+                       "a checkout build someone chose, on this contract: adopt it")
+        XCTAssertTrue(ManagedServer.sewnIsStale(recordedBinary: checkout, processStart: after, contract: current - 1, wanted: installed),
+                      "another build on an older contract: replace it")
+        XCTAssertFalse(ManagedServer.sewnIsStale(recordedBinary: checkout, processStart: before, contract: nil, wanted: installed),
+                       "an unproven checkout build: its holders decide, not its build")
+    }
+
+    /// One Sewn, and any app may bring it up to date or restart it while other apps hold it.
+    func testAnyAppReplacesAStaleSewnAndRestartsItWhoeverHoldsIt() async throws {
+        let test = LauncherTestHome()
+        let script = try test.file("stand-in-sewn", contents: standInServer)
+        let secret = try test.home.ensureSecret(for: .craft)
+        let port = freePort()
+        let veilHoldsIt: @Sendable () -> [RaoApp] = { [.veil] }
+
+        let older = ManagedServer(spec: spec(test, script: script, secret: secret, port: port, role: .sewn,
+                                             contract: RaoContract.version - 1),
+                                  secret: secret, launcherApp: .ambient)
+        let old = try await older.ensureRunning(timeout: 20)
+        XCTAssertEqual(old.contract, RaoContract.version - 1)
+
+        let current = spec(test, script: script, secret: secret, port: port, role: .sewn)
+        let craft = ManagedServer(spec: current, secret: secret, launcherApp: .craft, othersNeedIt: veilHoldsIt)
+        let replaced = try await craft.ensureRunning(timeout: 20)
+        XCTAssertFalse(replaced.adopted, "an older contract is replaced though Veil holds it")
+        XCTAssertNotEqual(replaced.pid, old.pid)
+        XCTAssertEqual(replaced.contract, RaoContract.version)
+        let oldGone = await waitUntil { !ProcessProbe.isAlive(old.pid) }
+        XCTAssertTrue(oldGone)
+
+        let ambient = ManagedServer(spec: current, secret: secret, launcherApp: .ambient, othersNeedIt: veilHoldsIt)
+        let adopted = try await ambient.ensureRunning(timeout: 20)
+        XCTAssertTrue(adopted.adopted, "a current Sewn is shared, not replaced")
+        XCTAssertEqual(adopted.pid, replaced.pid)
+
+        let restarted = try await ambient.restart(timeout: 20)
+        XCTAssertFalse(restarted.adopted, "an asked-for restart happens though Craft and Veil hold it")
+        XCTAssertNotEqual(restarted.pid, replaced.pid)
+        XCTAssertEqual(RunRecord.load(current.runRecord)?.process.pid, restarted.pid)
+
+        // Craft's handle names the Sewn Ambient replaced; its next check finds the new one.
+        let followed = try await craft.ensureRunning(timeout: 20)
+        XCTAssertEqual(followed.pid, restarted.pid)
+        XCTAssertTrue(followed.adopted)
+
+        await ambient.stop()
+        let gone = await waitUntil { !ProcessProbe.isAlive(restarted.pid) }
+        XCTAssertTrue(gone)
     }
 
     func testAServerThatExitsReportsItsLog() async throws {

@@ -80,6 +80,15 @@ public enum ProcessProbe {
         Set(output.split(whereSeparator: \.isNewline).compactMap { pid_t($0.trimmingCharacters(in: .whitespaces)) })
     }
 
+    /// Microseconds since 1970 when the file at `path` last changed in any way — its
+    /// bytes, its mode or attributes, or being renamed into place; nil when it isn't there.
+    /// Unlike the modification time, no copy can carry it over from the source.
+    public static func changeTime(ofFile path: String) -> UInt64? {
+        var info = stat()
+        guard stat(path, &info) == 0 else { return nil }
+        return UInt64(max(0, info.st_ctimespec.tv_sec)) * 1_000_000 + UInt64(max(0, info.st_ctimespec.tv_nsec) / 1_000)
+    }
+
     /// Resolved path of a file URL, for comparing against `executablePath`.
     public static func resolvedPath(_ url: URL) -> String {
         PrivateFile.path(url.resolvingSymlinksInPath())

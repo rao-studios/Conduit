@@ -12,7 +12,11 @@
 //  PIN:  Only the vessel app installs Sewn (SewnInstaller); this supervisor
 //        runs whatever is installed, after checking it is what install.json
 //        says and is signed by Rao. A development launch may name a checkout
-//        build instead.
+//        build instead. Every app has authority over the one Sewn's build: a
+//        stale one is replaced by whichever app finds it, and `restartSewn`
+//        restarts it whoever holds it. Leases decide only when it may stop.
+//        An app holding it calls `ensureSewn` again from time to time (Craft:
+//        once a minute while it works), which is how it finds a replacement.
 //
 
 #if os(macOS)
@@ -70,6 +74,24 @@ public actor RaoStackSupervisor {
         pinned: Bool = false,
         timeout: TimeInterval = 60
     ) async throws -> ServerHandle {
+        let server = try leasedSewn(executable: executable, workingDirectory: workingDirectory, pinned: pinned)
+        return try await server.ensureRunning(timeout: timeout)
+    }
+
+    /// Stops the shared Sewn, whoever holds it, and starts this app's build in its place,
+    /// with this app's lease on it: a restart the person asked for. The other apps holding
+    /// it reconnect to the new one. Parameters as `ensureSewn`.
+    public func restartSewn(
+        executable: URL? = nil,
+        workingDirectory: URL? = nil,
+        pinned: Bool = false,
+        timeout: TimeInterval = 60
+    ) async throws -> ServerHandle {
+        let server = try leasedSewn(executable: executable, workingDirectory: workingDirectory, pinned: pinned)
+        return try await server.restart(timeout: timeout)
+    }
+
+    private func leasedSewn(executable: URL?, workingDirectory: URL?, pinned: Bool) throws -> ManagedServer {
         let secret = try home.ensureSecret(for: app)
         if executable == nil { try installer.verifyInstalled() }
         try leases.acquire(for: app, pinned: pinned)
@@ -81,7 +103,7 @@ public actor RaoStackSupervisor {
             policy: executable == nil ? policy : nil,
             othersNeedIt: { [leases, app] in leases.others(excluding: app) })
         sewnServer = server
-        return try await server.ensureRunning(timeout: timeout)
+        return server
     }
 
     /// Lets go of this app's lease; stops Sewn when no one else holds one.

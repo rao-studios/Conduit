@@ -9,7 +9,9 @@
 //  OUT:  `othersAlive(excluding:)`: stop Sewn only when it is false.
 //  PIN:  Synchronous on purpose — an app's terminate handler can't await. A
 //        lease is live while its process is (pid and start time), so a crashed
-//        app never keeps Sewn up forever; dead leases are swept on read.
+//        app never keeps Sewn up forever; dead leases are swept on read. A
+//        lease keeps Sewn running; it never keeps an old build of it running
+//        (ManagedServer.sewnIsStale).
 //
 
 #if os(macOS)
