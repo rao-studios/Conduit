@@ -257,6 +257,10 @@ message ThreadDocumentContent {
   // Only when the request sets include_embeddings: one entry per partition, in
   // the same order as `texts`.
   repeated ThreadPartitionOutput partitions = 9;
+  // The metadata the document was deposited with (ThreadIndexItem.metadata),
+  // byte for byte; empty when it had none. It carries the Rao Verified record
+  // (`rao_verified`, `rao_verified_seal`) a training export reads.
+  bytes           metadata    = 10;
 }
 
 message ThreadPartitionOutput {

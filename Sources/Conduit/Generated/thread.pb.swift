@@ -608,6 +608,11 @@ public nonisolated struct Thread_V1_ThreadDocumentContent: Sendable {
   /// the same order as `texts`.
   public var partitions: [Thread_V1_ThreadPartitionOutput] = []
 
+  /// The metadata the document was deposited with (ThreadIndexItem.metadata),
+  /// byte for byte; empty when it had none. It carries the Rao Verified record
+  /// (`rao_verified`, `rao_verified_seal`) a training export reads.
+  public var metadata: Data = Data()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2296,7 +2301,7 @@ nonisolated extension Thread_V1_ThreadDocumentsRequest: SwiftProtobuf.Message, S
 
 nonisolated extension Thread_V1_ThreadDocumentContent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ThreadDocumentContent"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}owner_id\0\u{3}group_id\0\u{3}group_label\0\u{3}created_at\0\u{1}texts\0\u{3}media_type\0\u{1}partitions\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{3}owner_id\0\u{3}group_id\0\u{3}group_label\0\u{3}created_at\0\u{1}texts\0\u{3}media_type\0\u{1}partitions\0\u{1}metadata\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2313,6 +2318,7 @@ nonisolated extension Thread_V1_ThreadDocumentContent: SwiftProtobuf.Message, Sw
       case 7: try { try decoder.decodeRepeatedStringField(value: &self.texts) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.mediaType) }()
       case 9: try { try decoder.decodeRepeatedMessageField(value: &self.partitions) }()
+      case 10: try { try decoder.decodeSingularBytesField(value: &self.metadata) }()
       default: break
       }
     }
@@ -2346,6 +2352,9 @@ nonisolated extension Thread_V1_ThreadDocumentContent: SwiftProtobuf.Message, Sw
     if !self.partitions.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.partitions, fieldNumber: 9)
     }
+    if !self.metadata.isEmpty {
+      try visitor.visitSingularBytesField(value: self.metadata, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2359,6 +2368,7 @@ nonisolated extension Thread_V1_ThreadDocumentContent: SwiftProtobuf.Message, Sw
     if lhs.texts != rhs.texts {return false}
     if lhs.mediaType != rhs.mediaType {return false}
     if lhs.partitions != rhs.partitions {return false}
+    if lhs.metadata != rhs.metadata {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
