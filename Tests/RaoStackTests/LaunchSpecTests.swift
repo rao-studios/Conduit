@@ -35,12 +35,23 @@ final class LaunchSpecTests: XCTestCase {
     }
 
     func testSewnHonoursItsConfig() {
-        let config = SewnConfig(httpPort: 1, grpcPort: 2, dataDir: "/data/sewn", hfHome: "/models")
+        let config = SewnConfig(httpPort: 1, grpcPort: 2, dataDir: "/data/sewn")
         let spec = LaunchSpecs.sewn(home: home, config: config, executable: URL(fileURLWithPath: "/checkout/sewn-server"),
                                     workingDirectory: URL(fileURLWithPath: "/checkout"), challengeApp: .craft, inherited: [:])
         XCTAssertEqual(spec.arguments, ["--host", "127.0.0.1", "--port", "1", "--grpc-port", "2", "--data-dir", "/data/sewn"])
-        XCTAssertEqual(spec.environment["HF_HOME"], "/models")
+        XCTAssertEqual(spec.environment["HF_HOME"], "/tmp/rao/models/huggingface")
         XCTAssertEqual(PrivateFile.path(spec.workingDirectory), "/checkout")
+    }
+
+    /// Rao's apps keep their models in RAO_HOME: a config written by an earlier build that
+    /// moved Sewn's (`hfHome`) is read, and the folder stays.
+    func testSewnsModelsAreAlwaysInRaoHome() throws {
+        let config = try JSONDecoder().decode(SewnConfig.self, from: Data(#"{"hfHome":"~/Documents/huggingface","httpPort":1}"#.utf8))
+        XCTAssertEqual(config.httpPort, 1)
+        let spec = LaunchSpecs.sewn(home: home, config: config, executable: URL(fileURLWithPath: "/checkout/sewn-server"),
+                                    workingDirectory: URL(fileURLWithPath: "/checkout"), challengeApp: .ambient,
+                                    inherited: ["HF_HOME": "/Users/x/Documents/huggingface"])
+        XCTAssertEqual(spec.environment["HF_HOME"], "/tmp/rao/models/huggingface")
     }
 
     func testAThreadGetsItsAppsSecretPortsAndDataButNothingSecretInArgv() {
@@ -65,18 +76,19 @@ final class LaunchSpecTests: XCTestCase {
         XCTAssertEqual(spec.challengeApp, .craft)
     }
 
-    func testAStandaloneThreadWithCustomPlacesAndItsOwnModels() {
+    /// Custom places for its data and ports, but never for its models: an inherited HF_HOME is
+    /// replaced by RAO_HOME's models folder.
+    func testAStandaloneThreadWithCustomPlacesKeepsItsModelsInRaoHome() {
         let spec = LaunchSpecs.thread(
             for: .ambient, home: home, executable: URL(fileURLWithPath: "/bin/thread"), secret: "s",
             sewnPorts: RaoPortPlan.sewn,
             options: ThreadLaunchOptions(dataDirectory: URL(fileURLWithPath: "/Users/x/Documents/maryOS/thread-db"),
-                                         ports: RaoPorts(http: 8081, grpc: 9090), mothership: false,
-                                         huggingFaceHome: .inherit),
+                                         ports: RaoPorts(http: 8081, grpc: 9090), mothership: false),
             inherited: ["HF_HOME": "/Users/x/Documents/huggingface"])
         XCTAssertFalse(spec.arguments.contains("--mothership-host"))
         XCTAssertTrue(spec.arguments.contains("/Users/x/Documents/maryOS/thread-db"))
         XCTAssertEqual(spec.ports, RaoPorts(http: 8081, grpc: 9090))
-        XCTAssertEqual(spec.environment["HF_HOME"], "/Users/x/Documents/huggingface")
+        XCTAssertEqual(spec.environment["HF_HOME"], "/tmp/rao/models/huggingface")
     }
 }
 

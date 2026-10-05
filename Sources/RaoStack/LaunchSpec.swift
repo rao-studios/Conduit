@@ -53,16 +53,9 @@ public struct LaunchSpec: Sendable, Equatable {
     public var baseURL: URL { URL(string: "http://127.0.0.1:\(ports.http)")! }
 }
 
+/// How an app's Thread runs. Its models folder is not a choice: HF_HOME is always
+/// RAO_HOME/models/huggingface, where every Rao app keeps its models.
 public struct ThreadLaunchOptions: Sendable, Equatable {
-    public enum HuggingFaceHome: Sendable, Equatable {
-        /// RAO_HOME/models/huggingface.
-        case shared
-        /// Set nothing: the child keeps whatever HF_HOME it inherits, or the
-        /// hub's own default.
-        case inherit
-        case path(URL)
-    }
-
     /// `--use-mlx`: embed on device.
     public var useMLX: Bool
     /// `--graph-backend mlx|mistral|keyword`.
@@ -77,13 +70,12 @@ public struct ThreadLaunchOptions: Sendable, Equatable {
     public var ports: RaoPorts?
     /// Register with the shared Sewn. Off: the Thread runs standalone.
     public var mothership: Bool
-    public var huggingFaceHome: HuggingFaceHome
     /// Appended as given, last.
     public var extraArguments: [String]
 
     public init(useMLX: Bool = false, graphBackend: String? = nil, mlxModel: String? = nil, graphModel: String? = nil,
                 nodeID: UUID? = nil, dataDirectory: URL? = nil, ports: RaoPorts? = nil, mothership: Bool = true,
-                huggingFaceHome: HuggingFaceHome = .shared, extraArguments: [String] = []) {
+                extraArguments: [String] = []) {
         self.useMLX = useMLX
         self.graphBackend = graphBackend
         self.mlxModel = mlxModel
@@ -92,7 +84,6 @@ public struct ThreadLaunchOptions: Sendable, Equatable {
         self.dataDirectory = dataDirectory
         self.ports = ports
         self.mothership = mothership
-        self.huggingFaceHome = huggingFaceHome
         self.extraArguments = extraArguments
     }
 }
@@ -152,7 +143,7 @@ public enum LaunchSpecs {
         let ports = config.ports
         var environment = Self.inherited(inherited)
         environment[RaoHome.environmentKey] = PrivateFile.path(home.root)
-        environment["HF_HOME"] = PrivateFile.path(config.huggingFaceHome(home: home))
+        environment["HF_HOME"] = PrivateFile.path(home.huggingFaceHome)
         if let buildID { environment["RAO_SEWN_BUILD"] = buildID }
         return LaunchSpec(
             role: .sewn,
@@ -215,11 +206,7 @@ public enum LaunchSpecs {
         environment[StackSecret.appEnvironmentKey] = app.rawValue
         environment[StackSecret.environmentKey] = secret
         if let nodeID = options.nodeID { environment["THREAD_NODE_ID"] = nodeID.uuidString }
-        switch options.huggingFaceHome {
-        case .shared: environment["HF_HOME"] = PrivateFile.path(home.huggingFaceHome)
-        case .inherit: break
-        case .path(let url): environment["HF_HOME"] = PrivateFile.path(url)
-        }
+        environment["HF_HOME"] = PrivateFile.path(home.huggingFaceHome)
 
         return LaunchSpec(
             role: .thread,

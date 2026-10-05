@@ -29,14 +29,13 @@ public struct SewnConfig: Codable, Sendable, Equatable {
     public var grpcPort: Int?
     /// Sewn's data directory; `~` is expanded. Default RAO_HOME/sewn/db.
     public var dataDir: String?
-    /// HF_HOME for Sewn; `~` is expanded. Default RAO_HOME/models/huggingface.
-    public var hfHome: String?
+    // No models folder here: Sewn's HF_HOME is always RAO_HOME/models/huggingface, where
+    // every Rao app keeps its models. An `hfHome` an earlier build wrote is ignored.
 
-    public init(httpPort: Int? = nil, grpcPort: Int? = nil, dataDir: String? = nil, hfHome: String? = nil) {
+    public init(httpPort: Int? = nil, grpcPort: Int? = nil, dataDir: String? = nil) {
         self.httpPort = httpPort
         self.grpcPort = grpcPort
         self.dataDir = dataDir
-        self.hfHome = hfHome
     }
 
     public static func load(from url: URL) -> SewnConfig {
@@ -55,10 +54,6 @@ public struct SewnConfig: Codable, Sendable, Equatable {
         return URL(fileURLWithPath: RaoHome.expandTilde(dataDir), isDirectory: true)
     }
 
-    public func huggingFaceHome(home: RaoHome) -> URL {
-        guard let hfHome, !hfHome.isEmpty else { return home.huggingFaceHome }
-        return URL(fileURLWithPath: RaoHome.expandTilde(hfHome), isDirectory: true)
-    }
 }
 
 // MARK: - install.json
